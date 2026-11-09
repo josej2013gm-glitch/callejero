@@ -28,13 +28,18 @@ jobs:
       VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
       VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
       VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
-      VITE_AUTH_METHODS: ${{ vars.VITE_AUTH_METHODS || 'google,email' }}
+      VITE_OWNER_EMAIL: ${{ vars.VITE_OWNER_EMAIL }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Comprobar configuración
+        run: |
+          if [ -z "$VITE_FIREBASE_PROJECT_ID" ]; then echo "Falta la variable VITE_FIREBASE_PROJECT_ID"; exit 1; fi
+          if ! echo "$VITE_OWNER_EMAIL" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then echo "Falta o no es válida la variable VITE_OWNER_EMAIL (tu correo de Google)"; exit 1; fi
 
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
@@ -61,13 +66,20 @@ jobs:
       - name: Compilar
         run: npm run build
 
+      - name: Preparar reglas con el correo del propietario
+        run: |
+          OWNER=$(echo "$VITE_OWNER_EMAIL" | tr '[:upper:]' '[:lower:]')
+          sed -i "s/__OWNER_EMAIL__/$OWNER/g" firestore.rules
+          grep -q "$OWNER" firestore.rules
+
       - name: Publicar en Firebase (Hosting y reglas)
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
         run: |
-          if [ -z "$FIREBASE_SA" ] || [ -z "$PROJECT_ID" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT o la variable VITE_FIREBASE_PROJECT_ID"; exit 1; fi
+          if [ -z "$FIREBASE_SA" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT"; exit 1; fi
           printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           npx --yes firebase-tools@latest deploy --only hosting,firestore:rules --project "$PROJECT_ID" --non-interactive
           rm -f "$RUNNER_TEMP/sa.json"
+
