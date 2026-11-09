@@ -1,0 +1,69 @@
+# Informe de importación — Callejero de Cieza
+
+- Fecha de importación: 2026-11-09T18:58:40.177Z
+- Datos OSM a fecha de: 2026-11-09T18:57:11Z
+- Vías: 364 (urbanas: 287) · Cruces: 683 · Edificios y servicios: 65 · Zonas: 23
+- Verificaciones aplicadas: 0
+- Centro de referencia: Cieza (nodo place=town)
+
+## Avisos para revisar
+
+- poi-direccion-desconocida: 4
+- nombre-repetido: 5
+- nombre-sospechoso: 17
+- via-sin-cruces: 4
+- poi-sin-via: 23
+
+- [poi-direccion-desconocida] «Biblioteca Padre Salmerón» indica addr:street «Esquina del convento», que no coincide con ninguna vía importada. (w302869623)
+- [poi-direccion-desconocida] «Casa Cuartel de la Guardia Civil» indica addr:street «Calle de Santiago», que no coincide con ninguna vía importada. (w302874327)
+- [poi-direccion-desconocida] «Colegio Público Jerónimo Belda» indica addr:street «Calle de Santiago», que no coincide con ninguna vía importada. (w302874328)
+- [poi-direccion-desconocida] «Colegio Madre del Divino Pastor» indica addr:street «Carretera Madrid», que no coincide con ninguna vía importada. (w302874329)
+- [nombre-repetido] «Calle Pinos» aparece en 2 lugares separados; se distinguen como «Calle Pinos (Fuente Ascoy)», «Calle Pinos (Maripinar)». (w157518842,w302882506)
+- [nombre-repetido] «Camino de Enmedio» aparece en 2 lugares separados; se distinguen como «Camino de Enmedio (Maripinar)», «Camino de Enmedio (tramo 2)». (w435277078,w464879353)
+- [nombre-repetido] «N-301a» aparece en 2 lugares separados; se distinguen como «N-301a (tramo 1)», «N-301a (tramo 2)». (w369100097,w96152634)
+- [nombre-repetido] «RM-512» aparece en 2 lugares separados; se distinguen como «RM-512 (Bolvax)», «RM-512 (tramo 2)». (w195202117,w28124948)
+- [nombre-repetido] «RM-532» aparece en 2 lugares separados; se distinguen como «RM-532 (Maripinar)», «RM-532 (tramo 2)». (w81447777,w81452072)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «atajo parrales balsas ascoy». (w759949910)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «atajo parrales pista balsas ascoy». (w759949909)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «barranco de los lobos». (w463334928)
+- [via-sin-cruces] «Glorieta de la Hispanidad» no comparte nodos con otras vías importadas (posible error topológico o vía aislada). (w822823634)
+- [via-sin-cruces] «Glorieta de Pío XII» no comparte nodos con otras vías importadas (posible error topológico o vía aislada). (w822823632)
+- [via-sin-cruces] «N-301a (tramo 1)» no comparte nodos con otras vías importadas (posible error topológico o vía aislada). (w369100097)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «pista a la fuente del rey». (w463930252)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «pista de la madroñera». (w463334916)
+- [via-sin-cruces] «Plaza Mayor» no comparte nodos con otras vías importadas (posible error topológico o vía aislada). (w753353023)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «rambla de las monjas». (w463542303)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «rambla del carcavo». (w463609087)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «rambla del molinero». (w463334952)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «rambla roja». (w462370890)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda colas del judio». (w463542315)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda de las polveras». (w464348534)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda del la chinica del argaz». (w462279262)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda del morron». (w463057289)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda del morron 1». (w464348506)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda del poblado». (w460990540)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «senda madroñal 2». (w461670430)
+- [nombre-sospechoso] Nombre con abreviatura o en minúsculas: «subida garita forestal». (w464354073)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Ayuntamiento de Cieza». (w302893857)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Parque de Bomberos de Cieza». (w376521243)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Auditorio Gabriel Celaya». (w557141178)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Biblioteca Padre Salmerón». (w302869623)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Museo del Esparto». (w557140531)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Teatro Capitol». (w650636942)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Club de Piragüismo». (w558270676)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Pabellón Municipal de Deportes "Sala de Barrio"». (w557383523)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Polideportivo Municipal "Mariano Rojas"». (w557383521)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio de Educación Infantil y Primaria Antonio Buitrago Gómez». (w557806255)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio de Educación Infantil y Primaria José Marín». (w561632333)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio de Educación Infantil y Primaria Juan Ramón Jiménez». (w822825769)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio Madre del Divino Pastor». (w302874329)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio Miguel de Cervantes». (w557810061)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio Pedro Rodríguez». (w557810058)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio Público Jerónimo Belda». (w302874328)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio Público San Bartolomé». (w557810063)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Colegio Santo Cristo del Consuelo». (w557140529)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Instituto de Educación Secundaria Los Albares». (w557810052)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Mercado de Abastos». (w303005579)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Mercado Municipal de Abastos Nº2». (w302893852)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Casa Cuartel de la Guardia Civil». (w302874327)
+- [poi-sin-via] No se puede asignar una vía inequívoca a «Hospital de la Vega Lorenzo Guirao». (w303005581)
