@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Reglas de seguridad de Cloud Firestore para Callejero Cieza.
+// Cada usuario solo puede leer y escribir dentro de users/{su uid}. Todo lo demás está denegado.
+// Los datos geográficos NO están en Firestore: se sirven como archivo estático de la aplicación.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    // Límite de tamaño razonable para evitar abusos (Firestore admite hasta 1 MiB por documento)
+    function smallSession() {
+      return request.resource.data.keys().size() <= 20
+        && (!('answers' in request.resource.data) || request.resource.data.answers.size() <= 200)
+        && (!('wrongQs' in request.resource.data) || (request.resource.data.wrongQs is string && request.resource.data.wrongQs.size() <= 400000));
+    }
+
+    // Perfil y ajustes
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['settings', 'email', 'name', 'updatedAt']);
+
+      // Progreso de repaso espaciado y correcciones del panel de administración
+      match /state/{docId} {
+        allow read, delete: if isOwner(uid) && docId in ['progress', 'overrides'];
+        allow create, update: if isOwner(uid) && docId in ['progress', 'overrides'];
+      }
+
+      // Historial: un documento por sesión o simulacro
+      match /sessions/{sid} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && sid.size() <= 40
+          && request.resource.data.id == sid
+          && request.resource.data.endedAt is number
+          && request.resource.data.mode in ['oficial', 'simulacro', 'entrenamiento', 'mudo', 'repaso']
+          && smallSession();
+      }
+    }
+
+    // Cualquier otra ruta: denegada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

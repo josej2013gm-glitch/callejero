@@ -1,0 +1,29 @@
+{
+  "name": "callejero-cieza",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicación de estudio del callejero de Cieza para la oposición de Agente de Policía Local",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "test:e2e": "node tests/browser/e2e.mjs",
+    "data:import": "node scripts/import-osm.mjs",
+    "data:build": "node scripts/build-dataset.mjs",
+    "data:validate": "node scripts/validate-dataset.mjs",
+    "deploy": "npm test && npm run data:validate && npm run build && firebase deploy --only hosting,firestore"
+  },
+  "dependencies": {
+    "firebase": "^11.0.0",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

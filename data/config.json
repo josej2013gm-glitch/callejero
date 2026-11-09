@@ -1,0 +1,14 @@
+{
+  "townName": "Cieza",
+  "centerRadius": 500,
+  "peripheryDistance": 1500,
+  "peripheryMax": 4000,
+  "neighbourhoodRadius": 600,
+  "villageRadius": 1500,
+  "publicPoiBuffer": 120,
+  "nearDist": 200,
+  "neighborDist": 80,
+  "sameNameJoin": 150,
+  "parallelMaxAngle": 12,
+  "perpendicularMinAngle": 75
+}
