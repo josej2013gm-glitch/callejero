@@ -43,7 +43,7 @@ try {
 
   // Entrenamiento
   await go('#/entrenamiento');
-  await page.check('input[name=tipo][value=cruces]');
+  await page.check('#all'); await page.uncheck('#all'); await page.check('input[name=tipo][value=cruces]');
   await page.selectOption('select[name=n]', '5');
   await page.click('#cfg button[type=submit]');
   for (let i = 0; i < 5; i++) {
@@ -120,7 +120,7 @@ try {
 
   // Localizar tocando el mapa
   await go('#/entrenamiento');
-  await page.check('input[name=tipo][value=localizar]');
+  await page.check('#all'); await page.uncheck('#all'); await page.check('input[name=tipo][value=localizar]');
   await page.selectOption('select[name=diff]', '1');
   await page.click('#cfg button[type=submit]');
   let tapped = false;
@@ -135,6 +135,33 @@ try {
     } else { await page.locator('.opt').first().click(); await page.locator('.q-feedback .btn').click(); }
   }
   check('Localizar por toque evalúa el clic', tapped);
+
+  // Entrenamiento con varias modalidades: solo salen las elegidas
+  await go('#/'); await go('#/entrenamiento');
+  await page.check('#all'); await page.uncheck('#all');
+  await page.check('input[name=tipo][value=cruces]'); await page.check('input[name=tipo][value=edificios]');
+  check('Entrenamiento: «Mixto» se desmarca al elegir algunas', !(await page.isChecked('#all')));
+  await page.selectOption('select[name=n]', '10');
+  await page.click('#cfg button[type=submit]');
+  const cats = new Set();
+  for (let i = 0; i < 10; i++) {
+    await page.waitForSelector('.opt');
+    cats.add(await page.locator('.q-meta .chip').first().textContent());
+    await page.locator('.opt').first().click(); await page.locator('.q-feedback .btn').click();
+  }
+  check('Entrenamiento: solo modalidades elegidas', [...cats].every((c) => ['Cruces de calles', 'Edificios públicos y servicios'].includes(c)), [...cats].join(' | '));
+  // Simulacro: solo las 5 modalidades del simulacro
+  await go('#/simulacro');
+  await page.click('#discard').catch(() => {});
+  await page.waitForTimeout(200);
+  await page.selectOption('#tr select[name=n]', '30');
+  await page.click('#tr button[type=submit]'); await page.waitForSelector('.exam');
+  const simCats = new Set();
+  const nq = await page.locator('#qnav button').count();
+  for (let i = 0; i < nq; i++) { await page.locator('#qnav button').nth(i).click(); simCats.add(await page.locator('.q-meta .chip').first().textContent()); }
+  const okCats = ['Localizar una calle en el mapa', 'Identificar una calle resaltada', 'Cruces de calles', 'Edificios públicos y servicios', 'Accesos y vías principales'];
+  check('Simulacro: solo las 5 modalidades', nq === 30 && [...simCats].every((c) => okCats.includes(c)), `${nq} preg.: ` + [...simCats].join(' | '));
+  await go('#/simulacro'); await page.click('#discard').catch(() => {});
 
   // Repaso, zonas, admin, ajustes
   await go('#/repaso');

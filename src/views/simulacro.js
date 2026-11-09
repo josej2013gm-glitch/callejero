@@ -1,7 +1,7 @@
 import { html, setHTML, $, $$, confirmDialog, fmtDur, toast } from '../ui/dom.js';
 import { app, recordAnswer, saveSession, saveSettings } from '../app/store.js';
 import { kv } from '../services/localdb.js';
-import { createGenerator, OFFICIAL_MIX, OFFICIAL_MIX_TEXT, TYPES, TYPE_NAME } from '../engine/questions.js';
+import { createGenerator, OFFICIAL_MIX, OFFICIAL_MIX_TEXT, TYPES, TYPE_NAME, SIM_TYPES } from '../engine/questions.js';
 import { scoreExam, OFFICIAL_RULES, fmtNota } from '../engine/scoring.js';
 import { mountQuestion, answerRecord, compactQuestion } from '../ui/quiz.js';
 
@@ -34,9 +34,10 @@ export default {
               <li><b>${OFFICIAL_RULES.questions}</b> preguntas con cuatro alternativas</li>
               <li>Acierto <b>+0,10</b> · Error <b>−0,03</b> · En blanco <b>0</b></li>
               <li>Puntuación máxima <b>2,00</b> · prueba no eliminatoria</li>
+              <li>Modalidades: ${SIM_TYPES.map((k) => `${TYPE_NAME[k]} (${OFFICIAL_MIX[k]})`).join(' · ')}</li>
             </ul>
             <label>Tiempo (minutos, 0 = sin límite) <input type="number" name="min" min="0" max="180" value="${app.settings.officialMinutes}"></label>
-            <label class="sw"><input type="checkbox" name="text" ${app.settings.officialTextOnly ? 'checked' : ''}> Solo preguntas de texto (sin mapa)</label>
+            <label class="sw"><input type="checkbox" name="text" ${app.settings.officialTextOnly ? 'checked' : ''}> Solo preguntas de texto (sin mapa: cruces, edificios y accesos)</label>
             <p class="muted small">La duración real de la prueba la fijará el tribunal; ajusta el tiempo cuando se publique.</p>
             <button class="btn primary big" type="submit">Empezar simulacro oficial</button>
           </form>
@@ -46,7 +47,7 @@ export default {
             <label>Tiempo (minutos, 0 = sin límite) <input type="number" name="min" min="0" max="180" value="0"></label>
             <label>Zona <select name="zona"><option value="">Todo el municipio</option>${M.zones.map((z) => html`<option value="${z.id}" ${params.zona === z.id ? 'selected' : ''}>${z.name}</option>`)}</select></label>
             <label class="sw"><input type="checkbox" name="text"> Solo preguntas de texto</label>
-            <p class="muted small">Misma puntuación por pregunta (+0,10 / −0,03). La nota se muestra también escalada a 2 puntos.</p>
+            <p class="muted small">Mismas modalidades y puntuación por pregunta (+0,10 / −0,03). La nota se muestra también escalada a 2 puntos.</p>
             <button class="btn big" type="submit">Empezar</button>
           </form>
         </div>`);

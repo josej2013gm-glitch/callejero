@@ -25,7 +25,7 @@ const NAV = [
 const MOBILE = ['', 'mapa', 'entrenamiento', 'simulacro'];
 const SYNC_ICON = { local: '💾', ok: '☁️', pending: '⏳', syncing: '🔄', offline: '📴', quota: '⚠️', error: '⚠️' };
 
-let cleanup = null, started = false;
+let cleanup = null, started = false, authResolved = false;
 
 function shell() {
   setHTML(document.getElementById('app'), html`
@@ -76,6 +76,7 @@ function route() {
   const { name, params } = parseHash();
   let view = ROUTES[name] || dashboard;
   if (name === 'login' && (app.user || !cloud.isEnabled())) { location.hash = '#/'; return; }
+  if (cloud.isEnabled() && !app.user && name !== 'login') { if (authResolved) location.hash = '#/login'; return; }
   if (view.bare) { cleanup?.(); cleanup = null; document.body.classList.add('bare'); const r = document.getElementById('app'); r.innerHTML = '<main id="view"></main>'; view.render($('#view')); started = false; return; }
   if (!started) { document.body.classList.remove('bare'); shell(); started = true; }
   cleanup?.(); cleanup = null;
@@ -122,18 +123,22 @@ async function boot() {
   });
   window.addEventListener('hashchange', route);
   window.addEventListener('online', banners); window.addEventListener('offline', banners);
-  if (!cloud.isEnabled()) { route(); return; }
-  let first = true;
+  if (!cloud.isEnabled()) { route(); return; } // sin Firebase configurado: modo local (desarrollo)
+  const deny = async (msg) => { sessionStorage.setItem('loginError', msg); await cloud.signOut(); };
   cloud.onAuth(async (user) => {
-    if (user) { await afterLogin(user); if (parseHash().name === 'login') location.hash = '#/'; route(); }
-    else {
+    authResolved = true;
+    if (user) {
+      // Solo cuentas de Google, y solo las autorizadas (lo decide Firestore con sus reglas)
+      if (!cloud.isGoogleUser(user)) return deny('Solo se puede entrar con una cuenta de Google.');
+      if (!(await cloud.checkAccess(user.uid))) return deny(`La cuenta ${user.email} no está autorizada para usar esta aplicación.`);
+      await afterLogin(user);
+      if (parseHash().name === 'login') location.hash = '#/';
+      route();
+    } else {
       if (app.user) await switchOwner(null);
-      if (app.localMode) route();
-      else if (parseHash().name !== 'login') location.hash = '#/login'; else route();
+      if (parseHash().name !== 'login') location.hash = '#/login'; else route();
     }
-    first = false;
   });
-  setTimeout(() => { if (first && !document.querySelector('#view')) { app.localMode ? route() : (location.hash = '#/login'); } }, 6000);
 }
 
 // ---------- Service worker (solo en producción) ----------

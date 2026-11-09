@@ -47,13 +47,38 @@ export async function signInGoogle() {
     throw e;
   }
 }
-export async function signInEmail(email, pass) { const { auth, A } = await load(); return A.signInWithEmailAndPassword(auth, email, pass); }
-export async function registerEmail(email, pass) { const { auth, A } = await load(); return A.createUserWithEmailAndPassword(auth, email, pass); }
-export async function resetPassword(email) { const { auth, A } = await load(); return A.sendPasswordResetEmail(auth, email); }
 export async function signOut() { const { auth, A } = await load(); return A.signOut(auth); }
 
 // ---------- Firestore ----------
 const userRef = (F, db, uid) => F.doc(db, 'users', uid);
+const accessRef = (F, db) => F.doc(db, 'config', 'access');
+
+/** Solo se admiten cuentas de Google con el correo verificado. */
+export function isGoogleUser(user) {
+  return !!user && user.emailVerified && (user.providerData || []).some((p) => p.providerId === 'google.com');
+}
+
+/**
+ * ¿Está autorizada esta cuenta? Lo decide Firestore con sus reglas: si no lo está,
+ * leer su propio documento devuelve «permission-denied». Sin conexión no se puede
+ * comprobar y se permite el uso local (los datos de la nube siguen protegidos).
+ */
+export async function checkAccess(uid) {
+  const { db, F } = await load();
+  try { await F.getDoc(userRef(F, db, uid)); return true; }
+  catch (e) { if (e.code === 'permission-denied') return false; return true; }
+}
+
+/** Lista de correos autorizados (solo la puede leer y cambiar el propietario). */
+export async function getAllowed() {
+  const { db, F } = await load();
+  const d = await F.getDoc(accessRef(F, db));
+  return d.exists() ? d.data().emails || [] : [];
+}
+export async function setAllowed(emails) {
+  const { db, F } = await load();
+  await F.setDoc(accessRef(F, db), { emails, updatedAt: Date.now() });
+}
 const stateRef = (F, db, uid, id) => F.doc(db, 'users', uid, 'state', id);
 
 /** Descarga perfil, progreso, correcciones y sesiones nuevas desde sinceMs. */
@@ -105,10 +130,7 @@ export function explain(e) {
   if (c === 'permission-denied') return { kind: 'perm', msg: 'Firestore ha denegado el acceso. Comprueba que las reglas de seguridad (firestore.rules) están publicadas.' };
   if (c === 'unavailable' || c === 'auth/network-request-failed' || !navigator.onLine) return { kind: 'offline', msg: 'Sin conexión con Firebase. Los cambios quedan pendientes en este dispositivo.' };
   if (c === 'auth/unauthorized-domain') return { kind: 'auth', msg: 'Este dominio no está autorizado en Firebase Authentication (Configuración → Dominios autorizados).' };
-  if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found') return { kind: 'auth', msg: 'Correo o contraseña incorrectos.' };
-  if (c === 'auth/email-already-in-use') return { kind: 'auth', msg: 'Ya existe una cuenta con ese correo.' };
-  if (c === 'auth/weak-password') return { kind: 'auth', msg: 'La contraseña debe tener al menos 6 caracteres.' };
-  if (c === 'auth/operation-not-allowed') return { kind: 'auth', msg: 'Este método de acceso no está activado en Firebase Authentication.' };
+  if (c === 'auth/operation-not-allowed') return { kind: 'auth', msg: 'El acceso con Google no está activado en Firebase Authentication.' };
   if (c === 'auth/popup-closed-by-user') return { kind: 'auth', msg: 'Se cerró la ventana de acceso antes de terminar.' };
   if (c === 'auth/too-many-requests') return { kind: 'auth', msg: 'Demasiados intentos. Espera unos minutos.' };
   if (c === 'failed-precondition') return { kind: 'index', msg: 'Firestore necesita un índice o la configuración no es válida: ' + (e.message || '') };

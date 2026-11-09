@@ -11,7 +11,7 @@ import { app, recordAnswer, saveSession } from '../app/store.js';
 export function runPractice(root, opts) {
   const history = [];
   const startedAt = Date.now();
-  let current = null, i = 0, finished = false;
+  let current = null, i = 0, finished = false, dead = false;
   setHTML(root, html`
     <div class="practice">
       <div class="practice-bar card">
@@ -64,7 +64,7 @@ export function runPractice(root, opts) {
       mode: opts.mode, cfg: opts.cfg || {}, startedAt, endedAt: Date.now(), durationMs: Date.now() - startedAt,
       answers: history.map((h) => h.rec), wrongQs: history.filter((h) => !h.ok && h.q.options).slice(0, 30).map((h) => compactQuestion(h.q)),
     });
-    if (silent) return;
+    if (silent || dead) return; // la vista ya se ha cerrado: no pintar encima de otra sección
     const avg = Math.round(history.reduce((s, h) => s + h.ms, 0) / history.length);
     setHTML(root, html`
       <div class="card result">
@@ -80,7 +80,7 @@ export function runPractice(root, opts) {
   }
 
   nextQ();
-  return { destroy() { current?.destroy(); if (!finished && history.length) finish(true); } };
+  return { destroy() { dead = true; current?.destroy(); if (!finished && history.length) finish(true); } };
 }
 
 export { el };

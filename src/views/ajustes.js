@@ -2,7 +2,7 @@ import { html, setHTML, $, toast, confirmDialog, fmtDate } from '../ui/dom.js';
 import { app, saveSettings, syncNow, exportBackup, importBackup, resetAll, on } from '../app/store.js';
 import { parseIntervals, DEFAULT_INTERVALS } from '../engine/srs.js';
 import * as cloud from '../services/cloud.js';
-import { APP_VERSION } from '../config/firebase.js';
+import { APP_VERSION, ownerEmail } from '../config/firebase.js';
 
 const SYNC = { local: 'Modo local (sin cuenta)', ok: 'Sincronizado', pending: 'Cambios pendientes', syncing: 'Sincronizando…', offline: 'Sin conexión', quota: 'Cuota de Firebase agotada', error: 'Error de sincronización' };
 
@@ -18,8 +18,7 @@ export default {
               <p>Estado: <b class="sync-${app.sync.state}">${SYNC[app.sync.state] || app.sync.state}</b>${app.sync.lastSync ? html` · última sincronización ${fmtDate(app.sync.lastSync, true)}` : ''}</p>
               ${app.sync.msg ? html`<p class="warnbox small">${app.sync.msg}</p>` : ''}
               <div class="row"><button class="btn" id="sync" type="button">Sincronizar ahora</button><button class="btn ghost" id="out" type="button">Cerrar sesión</button></div>`
-            : cloud.isEnabled() ? html`<p>Estás usando la aplicación sin cuenta: los datos solo se guardan en este dispositivo.</p><a class="btn primary" href="#/login">Iniciar sesión para sincronizar</a>`
-              : html`<p>Firebase no está configurado (falta el archivo <code>.env.local</code>). La aplicación funciona en modo local.</p>`}
+            : html`<p>Firebase no está configurado (faltan las variables de entorno). La aplicación funciona en modo local.</p>`}
             <p class="small muted">Para no superar la cuota gratuita, el progreso se envía agrupado (como mucho cada 20 s) y cada sesión terminada es un único documento.</p>
           </div>
           <form class="card form" id="study"><h3>Estudio</h3>
@@ -31,6 +30,7 @@ export default {
             <div class="row"><button class="btn primary" type="submit">Guardar</button><button class="btn ghost" id="defIv" type="button">Intervalos por defecto</button></div>
           </form>
         </div>
+        ${isOwner() ? html`<div class="card" id="acc"><h3>Cuentas autorizadas</h3><p class="muted small">Cargando…</p></div>` : ''}
         <div class="grid cols2">
           <div class="card"><h3>Copia de seguridad</h3>
             <p class="small">Descarga tus ajustes, progreso, historial y correcciones en un archivo JSON. Al importarla se fusiona con lo que ya tienes.</p>
@@ -49,6 +49,7 @@ export default {
             <button class="btn ghost small" id="upd" type="button">Buscar actualización de la aplicación</button>
           </div>
         </div>`);
+      if (isOwner()) accounts();
       $('#sync', root)?.addEventListener('click', () => syncNow().then(() => toast(app.sync.state === 'ok' ? 'Sincronizado.' : app.sync.msg || 'Pendiente', app.sync.state === 'ok' ? 'ok' : 'warn')));
       $('#out', root)?.addEventListener('click', async () => { await syncNow().catch(() => {}); await cloud.signOut(); });
       $('#study', root).addEventListener('submit', async (e) => {
@@ -77,6 +78,39 @@ export default {
         await reg.update(); toast(reg.waiting ? 'Hay una versión nueva: pulsa «Actualizar» en el aviso.' : 'Ya tienes la última versión.', 'info');
       });
     };
+    const isOwner = () => !!(app.user && ownerEmail && (app.user.email || '').toLowerCase() === ownerEmail);
+    const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    /** Gestión de las cuentas de Google que pueden entrar (solo el propietario). */
+    async function accounts() {
+      const box = $('#acc', root); if (!box) return;
+      let list;
+      try { list = await cloud.getAllowed(); }
+      catch (e) { setHTML(box, html`<h3>Cuentas autorizadas</h3><p class="warnbox small">${cloud.explain(e).msg}</p>`); return; }
+      const paint = () => {
+        setHTML(box, html`
+          <h3>Cuentas autorizadas</h3>
+          <p class="small">Solo pueden entrar las cuentas de Google de esta lista. Tu cuenta (${ownerEmail}) siempre tiene acceso y es la única que puede cambiarla. Cada cuenta ve únicamente su propio progreso.</p>
+          ${list.length ? html`<ul class="kv">${list.map((m) => html`<li><span>${m}</span><button class="link danger" data-rm="${m}" type="button">Quitar</button></li>`)}</ul>` : html`<p class="muted small">Ninguna cuenta adicional.</p>`}
+          <form id="accf" class="row wrap"><input type="email" name="email" placeholder="correo@gmail.com" required style="flex:1;min-width:14rem"><button class="btn primary" type="submit">Autorizar</button></form>`);
+        $('#accf', box).addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const m = new FormData(e.target).get('email').trim().toLowerCase();
+          if (!EMAIL.test(m)) return toast('Correo no válido.', 'warn');
+          if (m === ownerEmail || list.includes(m)) return toast('Esa cuenta ya tiene acceso.', 'info');
+          await save([...list, m], `Autorizada ${m}.`);
+        });
+        box.querySelectorAll('[data-rm]').forEach((b) => b.addEventListener('click', async () => {
+          if (await confirmDialog('Quitar acceso', `${b.dataset.rm} dejará de poder entrar. Sus datos no se borran.`, 'Quitar')) await save(list.filter((x) => x !== b.dataset.rm), 'Acceso retirado.');
+        }));
+      };
+      const save = async (next, msg) => {
+        try { await cloud.setAllowed(next); list = next; paint(); toast(msg, 'ok'); }
+        catch (e) { toast(cloud.explain(e).msg, 'error', 6000); }
+      };
+      paint();
+    }
+
     draw();
     const off = on((w) => { if (w === 'sync' || w === 'user') draw(); });
     return off;

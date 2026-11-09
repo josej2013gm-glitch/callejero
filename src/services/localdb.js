@@ -36,18 +36,34 @@ export const sessions = {
   clear: () => req(store('sessions', 'readwrite').clear()),
 };
 
-/** ¿Tiene datos la base local de un propietario? (para ofrecer migrarlos a la cuenta) */
-export async function hasData(owner) {
-  const prev = dbName;
-  await openDb(owner);
-  const n = (await sessions.all()).length + Object.keys((await kv.get('progress'))?.items || {}).length;
-  if (prev && prev !== dbName) await openDb(prev.replace('callejero-', ''));
-  return n > 0;
+// Lecturas de OTRA base (p. ej. la de uso sin cuenta) con una conexión independiente,
+// para no cerrar la conexión principal mientras la usa la sincronización.
+function openOther(owner) {
+  const r = indexedDB.open('callejero-' + owner, VERSION);
+  r.onupgradeneeded = () => {
+    const d = r.result;
+    if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
+    if (!d.objectStoreNames.contains('sessions')) d.createObjectStore('sessions', { keyPath: 'id' }).createIndex('endedAt', 'endedAt');
+  };
+  return req(r);
+}
+async function readOther(owner) {
+  const d = await openOther(owner);
+  try {
+    const t = d.transaction(['kv', 'sessions']);
+    const [progress, sessionsList, overrides, settings] = await Promise.all([
+      req(t.objectStore('kv').get('progress')), req(t.objectStore('sessions').getAll()),
+      req(t.objectStore('kv').get('overrides')), req(t.objectStore('kv').get('settings')),
+    ]);
+    return { progress, sessions: sessionsList.sort((a, b) => a.endedAt - b.endedAt), overrides, settings };
+  } finally { d.close(); }
 }
 
-export async function readAll(owner) {
-  await openDb(owner);
-  return { progress: await kv.get('progress'), sessions: await sessions.all(), overrides: await kv.get('overrides'), settings: await kv.get('settings') };
+/** ¿Tiene datos la base local de un propietario? (para ofrecer migrarlos a la cuenta) */
+export async function hasData(owner) {
+  const r = await readOther(owner);
+  return r.sessions.length + Object.keys(r.progress?.items || {}).length > 0;
 }
+export const readAll = readOther;
 
 export function currentDbName() { return dbName; }

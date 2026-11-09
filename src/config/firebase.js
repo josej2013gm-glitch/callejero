@@ -1,7 +1,8 @@
-// Configuración PÚBLICA de Firebase, leída de las variables de entorno de Vite (.env.local).
+// Configuración PÚBLICA de Firebase, leída de las variables de entorno de Vite
+// (.env.local en local o variables del repositorio en GitHub Actions).
 // Estos valores identifican el proyecto y no son secretos: la protección real de los datos
 // está en las reglas de Firestore (firestore.rules) y en los dominios autorizados de Authentication.
-// Si faltan, la aplicación funciona en modo local (sin cuenta ni sincronización).
+// Si faltan, la aplicación funciona en modo local (solo para desarrollo).
 
 const env = (typeof import.meta !== 'undefined' && import.meta.env) || {};
 
@@ -16,7 +17,7 @@ export const firebaseConfig = {
 
 export const firebaseEnabled = !!(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 
-/** Métodos de acceso activados: "google", "email" o ambos separados por coma. */
-export const authMethods = String(env.VITE_AUTH_METHODS || 'google,email').split(',').map((s) => s.trim()).filter(Boolean);
+/** Correo del propietario: siempre tiene acceso y es el único que gestiona las cuentas autorizadas. */
+export const ownerEmail = String(env.VITE_OWNER_EMAIL || '').trim().toLowerCase();
 
-export const APP_VERSION = env.VITE_APP_VERSION || '1.0.0';
+export const APP_VERSION = env.VITE_APP_VERSION || '1.1.0';

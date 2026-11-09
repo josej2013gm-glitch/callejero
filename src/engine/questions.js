@@ -24,9 +24,11 @@ export const TYPES = [
 ];
 export const TYPE_NAME = Object.fromEntries(TYPES.map((t) => [t.key, t.name]));
 
-// Reparto del simulacro oficial (20 preguntas)
-export const OFFICIAL_MIX = { identificar: 2, localizar: 2, cruces: 3, proximas: 2, paralelas: 1, perpendiculares: 1, edificios: 4, accesos: 1, orientacion: 2, recorridos: 2 };
-export const OFFICIAL_MIX_TEXT = { cruces: 4, proximas: 2, paralelas: 2, perpendiculares: 2, edificios: 5, accesos: 1, orientacion: 2, recorridos: 2 };
+// Modalidades que entran en los simulacros y reparto del simulacro oficial (20 preguntas)
+export const SIM_TYPES = ['localizar', 'identificar', 'cruces', 'edificios', 'accesos'];
+export const OFFICIAL_MIX = { localizar: 4, identificar: 4, cruces: 5, edificios: 5, accesos: 2 };
+// Variante «solo texto»: sin las modalidades que necesitan mapa
+export const OFFICIAL_MIX_TEXT = { cruces: 8, edificios: 8, accesos: 4 };
 
 // Bandas de distancia (m) para distractores según dificultad
 const BANDS = {
@@ -512,8 +514,8 @@ export function createGenerator(model, opts = {}) {
     const out = [], ids = new Set();
     const plan = [];
     for (const [t, n] of Object.entries(mix)) for (let i = 0; i < n; i++) plan.push(t);
-    const textTypes = TYPES.filter((t) => !t.map).map((t) => t.key);
-    const fallback = textOnly ? textTypes : TYPES.map((t) => t.key);
+    // Si una modalidad no da más preguntas, se completa SOLO con las otras modalidades del reparto
+    const fallback = Object.keys(mix).filter((k) => !textOnly || !TYPES.find((t) => t.key === k)?.map);
     for (const t0 of shuffle(plan)) {
       let q = null;
       const tryTypes = [t0, ...shuffle(fallback.filter((x) => x !== t0))];

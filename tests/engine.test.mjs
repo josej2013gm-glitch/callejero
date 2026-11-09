@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { makeFixture } from './fixtures/make-fixture.mjs';
 import { buildDataset } from '../src/engine/build.js';
 import { createModel, pairKey } from '../src/engine/model.js';
-import { createGenerator, TYPES, OFFICIAL_MIX, OFFICIAL_MIX_TEXT, validate } from '../src/engine/questions.js';
+import { createGenerator, TYPES, OFFICIAL_MIX, OFFICIAL_MIX_TEXT, SIM_TYPES, validate } from '../src/engine/questions.js';
 import { checkQuestion as verifyQuestion } from '../src/engine/verify.js';
 import { scoreExam, OFFICIAL_RULES, fmtNota } from '../src/engine/scoring.js';
 import { review, newItem, mergeProgress, priority, isMastered, parseIntervals, DAY } from '../src/engine/srs.js';
@@ -142,8 +142,11 @@ test('generador: simulacro oficial de 20 preguntas sin duplicados', () => {
     assert.ok(qs.length >= 18, `simulacro con ${qs.length} preguntas en el municipio de prueba`);
     assert.equal(new Set(qs.map((q) => q.id)).size, qs.length);
     qs.forEach(checkQuestion);
+    assert.ok(qs.every((q) => SIM_TYPES.includes(q.cat)), 'solo modalidades del simulacro: ' + [...new Set(qs.map((q) => q.cat))].join(','));
+    assert.equal(Object.values(OFFICIAL_MIX).reduce((a, b) => a + b, 0), 20);
     const txt = gen.batch(OFFICIAL_MIX_TEXT, { mixedDiff: true, textOnly: true });
     assert.ok(txt.every((q) => !q.map || !['highlight', 'choices', 'point', 'poi'].includes(q.map.mode)), 'modo solo texto');
+    assert.ok(txt.every((q) => ['cruces', 'edificios', 'accesos'].includes(q.cat)), 'solo texto: cruces, edificios y accesos');
   }
 });
 

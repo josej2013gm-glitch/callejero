@@ -4,6 +4,7 @@ Aplicación web (PWA) para preparar la **prueba práctica de callejero** de la o
 
 - **Gratuita**: GitHub Free + Firebase Spark (Hosting, Authentication y Firestore dentro de cuota). Sin servidores propios, sin IA, sin tarjeta bancaria.
 - **Funciona sin conexión**: el callejero se guarda como datos vectoriales locales (GeoJSON) y la aplicación se instala en ordenador y móvil.
+- **Acceso restringido**: solo cuentas de Google; entra el propietario (`VITE_OWNER_EMAIL`) y las cuentas que él autorice desde Ajustes. Lo impone Firestore con sus reglas.
 - **Datos honestos**: todo procede de OpenStreetMap; cada vía, cruce y edificio indica su fuente, fecha y estado de verificación. Las preguntas solo se generan cuando los datos permiten una respuesta inequívoca.
 
 > Instalación paso a paso: **[GUIA_INSTALACION.md](GUIA_INSTALACION.md)**.
@@ -12,7 +13,7 @@ Aplicación web (PWA) para preparar la **prueba práctica de callejero** de la o
 
 ```bash
 npm install
-cp .env.example .env.local      # rellena los valores de Firebase (opcional: sin ellos funciona en modo local)
+cp .env.example .env.local      # valores de Firebase y VITE_OWNER_EMAIL (sin ellos: modo local de desarrollo)
 npm run data:import             # descarga el callejero de Cieza de OpenStreetMap (una vez)
 npm run dev                     # http://localhost:5173
 npm run deploy                  # pruebas + validación + compilación + publicación en Firebase
@@ -25,8 +26,8 @@ npm run deploy                  # pruebas + validación + compilación + publica
 | **Inicio** | Dominio del callejero, calles estudiadas, últimos resultados, mejor nota, repasos pendientes y recomendación según tus errores. |
 | **Mapa** | Leaflet con búsqueda, capas (mapa base, nombres, vías, edificios, puntos de interés), filtro por zona y categoría, ficha de cada vía (cruces, próximas, paralelas, edificios, fuente) y **modo mapa mudo**. |
 | **Zonas** | Barrios, pedanías y polígonos de OSM + áreas de estudio (centro, residencial, periferia, accesos, entorno de edificios públicos). Cada una con nº de vías, estudiadas, dominio y modo estudio con nombres ocultables. |
-| **Entrenamiento** | 10 modalidades (localizar, identificar, cruces, próximas, paralelas, perpendiculares, edificios, accesos, orientación, recorridos) en 3 dificultades o progresiva, por zona o por calle; corrección inmediata con explicación y mapa. |
-| **Simulacro** | Oficial: 20 preguntas, 4 alternativas, +0,10 / −0,03 / 0, máximo 2. Cronómetro, navegación, blancos, resumen antes de entregar, revisión con explicaciones. Entrenamiento: 5, 10, 20 o 30 preguntas. Se recupera si se cierra la página. |
+| **Entrenamiento** | Una, varias o todas (mixto) de las 10 modalidades (localizar, identificar, cruces, próximas, paralelas, perpendiculares, edificios, accesos, orientación, recorridos) en 3 dificultades o progresiva, por zona o por calle; corrección inmediata con explicación y mapa. |
+| **Simulacro** | Modalidades: localizar, identificar, cruces, edificios y accesos (4/4/5/5/2). Oficial: 20 preguntas, 4 alternativas, +0,10 / −0,03 / 0, máximo 2. Cronómetro, navegación, blancos, resumen antes de entregar, revisión con explicaciones. Entrenamiento: 5, 10, 20 o 30 preguntas. Se recupera si se cierra la página. |
 | **Mapa mudo** | 5 niveles progresivos (vías principales → localizar → cruces → calles secundarias → experto) que se desbloquean con 8 aciertos de 10. |
 | **Repaso** | Repetición espaciada por conceptos (calles, cruces, edificios, relaciones) con intervalos configurables; prioriza fallos, olvidos y respuestas lentas. Repite falladas o genera preguntas nuevas sobre lo mismo. |
 | **Estadísticas** | Aciertos, nota media y mejor, evolución, aciertos por semana, por categoría y por zona, calles dominadas/pendientes, errores frecuentes, tiempos e historial. |
@@ -50,7 +51,9 @@ tests/                         Pruebas unitarias (node --test) y de extremo a ex
 
 **Datos**: `npm run data:import` consulta una sola vez la API Overpass, guarda el volcado en `data-raw/` y genera `public/data/callejero.geojson` con vías (tramos con el mismo nombre unidos), cruces por nodos compartidos con su ángulo, proximidad (≤ 200 m), paralelismo, edificios públicos asociados a su vía (por `addr:street` o por proximidad inequívoca), zonas y avisos de calidad. Es un GeoJSON estándar que puede abrirse en QGIS para contrastarlo con cartografía oficial.
 
-**Firestore** guarda solo datos del usuario: `users/{uid}` (ajustes), `users/{uid}/state/progress` (repaso), `users/{uid}/state/overrides` (correcciones) y `users/{uid}/sessions/{id}` (un documento por sesión). IndexedDB es la fuente de verdad local; los cambios se envían agrupados y diferidos. Si se agota la cuota se avisa y se reintenta más tarde sin perder nada.
+**Publicación desde el navegador**: `.github/workflows/publicar.yml` instala, importa (si hace falta), prueba, valida, compila y publica en Firebase con cada cambio en `main` (ver GUIA_INSTALACION.md, anexo A).
+
+**Firestore** guarda solo datos del usuario y la lista `config/access` de cuentas autorizadas: `users/{uid}` (ajustes), `users/{uid}/state/progress` (repaso), `users/{uid}/state/overrides` (correcciones) y `users/{uid}/sessions/{id}` (un documento por sesión). IndexedDB es la fuente de verdad local; los cambios se envían agrupados y diferidos. Si se agota la cuota se avisa y se reintenta más tarde sin perder nada.
 
 ## Comandos
 
