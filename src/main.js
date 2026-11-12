@@ -1,6 +1,6 @@
 import './styles/main.css';
 import { html, setHTML, $, $$, toast, confirmDialog } from './ui/dom.js';
-import { app, init, on, switchOwner, importLocalIntoAccount, setMuni } from './app/store.js';
+import { app, init, on, switchOwner, importLocalIntoAccount, setMuni, refreshMunis } from './app/store.js';
 import * as cloud from './services/cloud.js';
 import { kv, hasData } from './services/localdb.js';
 
@@ -49,16 +49,27 @@ function shell() {
   updateSync(); banners();
 }
 
-/** Cambia de municipio: cierra la vista actual (guardando lo que haya en curso) y recarga los datos. */
+/** Cambia de municipio: cierra la vista actual (guardando lo que haya en curso), carga el
+ *  callejero del nuevo municipio y vuelve a abrir la misma sección ya con sus datos. */
 async function changeMuni(id) {
   if (id === app.muni) return;
   cleanup?.(); cleanup = null;
+  const target = app.munis.find((m) => m.id === id);
+  $('#view').innerHTML = `<div class="card muted">Cargando el callejero de ${target?.name || id}…</div>`;
   await setMuni(id);
-  $('#muniSel').value = app.muni;
-  $$('[data-muni]').forEach((b) => b.classList.toggle('on', b.dataset.muni === app.muni));
+  // Los parámetros de la sección (una calle o una zona) eran del municipio anterior
+  const { name } = parseHash();
+  if (location.hash.includes('?')) history.replaceState(null, '', '#/' + name);
+  paintMuniPickers();
   document.body.classList.remove('menu-open');
-  toast(`Estudiando el callejero de ${app.muniInfo.name}.`, 'info', 2500);
+  toast(app.model ? `Estudiando el callejero de ${app.muniInfo.name}.` : `Todavía no hay callejero de ${app.muniInfo.name}.`, app.model ? 'info' : 'warn', 2500);
   route();
+}
+/** Actualiza el selector y las pestañas (municipio activo y cuáles tienen datos). */
+function paintMuniPickers() {
+  const sel = $('#muniSel');
+  if (sel) setHTML(sel, html`${app.munis.map((m) => html`<option value="${m.id}" ${m.id === app.muni ? 'selected' : ''}>${m.name}${m.available === false && !(m.id === app.muni && app.model) ? ' (sin datos)' : ''}</option>`)}`);
+  $$('[data-muni]').forEach((b) => b.classList.toggle('on', b.dataset.muni === app.muni));
 }
 
 function updateSync() {
@@ -141,6 +152,11 @@ async function boot() {
   });
   window.addEventListener('hashchange', route);
   window.addEventListener('online', banners); window.addEventListener('offline', banners);
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || !started) return;
+    await refreshMunis().catch(() => {});
+    paintMuniPickers();
+  });
   if (!cloud.isEnabled()) { route(); return; } // sin Firebase configurado: modo local (desarrollo)
   const deny = async (msg) => { sessionStorage.setItem('loginError', msg); await cloud.signOut(); };
   cloud.onAuth(async (user) => {

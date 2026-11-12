@@ -69,7 +69,6 @@ export async function loadDataset() {
   else if (datasetCache.has(app.muni)) { app.dataset = datasetCache.get(app.muni); app.datasetSource = 'publicado'; }
   else {
     try {
-      if (app.muniInfo && app.muniInfo.available === false) throw new Error('todavía no hay datos de ' + app.muniInfo.name);
       const res = await fetch(base() + (app.muniInfo?.file || 'data/callejero.geojson'), { cache: 'no-cache' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       app.dataset = await res.json(); app.datasetSource = 'publicado';
@@ -98,7 +97,19 @@ export async function setMuni(id) {
   try { localStorage.setItem('muni', m.id); } catch { /* sin almacenamiento */ }
   refreshSessions();
   await loadDataset();
+  if (!app.model) {
+    // La lista de municipios se leyó al abrir la app: puede que el callejero se haya publicado después
+    await loadMunis();
+    app.muniInfo = app.munis.find((x) => x.id === app.muni) || app.muniInfo;
+    datasetCache.delete(app.muni);
+    await loadDataset();
+  }
   emit('muni'); emit('progress'); emit('sessions');
+}
+/** Vuelve a leer la lista de municipios publicada (disponibilidad y fechas). */
+export async function refreshMunis() {
+  await loadMunis();
+  app.muniInfo = app.munis.find((x) => x.id === app.muni) || app.muniInfo;
 }
 
 // ---------- Carga de datos del usuario ----------

@@ -92,7 +92,12 @@ export function createMap(container, opts = {}) {
   function fitAll() {
     const t = M.meta.town?.c;
     if (t && !opts.streets) map.setView(LL(t), 15);
-    else { const b = boundsOf(visibleStreets.map((s) => s.id)); if (b) map.fitBounds(b, { padding: [20, 20] }); else map.setView([38.24, -1.42], 14); }
+    else {
+      // Sin centro conocido: encuadrar las vías urbanas (no los caminos de todo el término municipal)
+      const urban = visibleStreets.filter((s) => !s.rural);
+      const b = boundsOf((urban.length ? urban : visibleStreets).map((s) => s.id));
+      if (b) map.fitBounds(b, { padding: [20, 20], maxZoom: 16 }); else map.setView([38.24, -1.42], 14);
+    }
   }
   function boundsOf(ids) {
     let b = null;

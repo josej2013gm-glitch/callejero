@@ -229,6 +229,32 @@ try {
   await page.click('#tr button[type=submit]'); await page.waitForSelector('.exam'); await page.waitForTimeout(400);
   await shot('18-movil-simulacro');
   check('Móvil: navegación inferior visible', await page.locator('.bottomnav').isVisible());
+  // ---- Cambio de municipio con el mapa abierto y lista de municipios desfasada ----
+  {
+    const ctx2 = await browser.newContext({ viewport: { width: 1360, height: 900 } });
+    const p2 = await ctx2.newPage();
+    p2.on('pageerror', (e) => errors.push('pageerror(cambio): ' + e.message));
+    let first = true;
+    await p2.route('**/data/municipios.json', async (r) => {
+      const res = await r.fetch(); const j = await res.json();
+      if (first) { first = false; j.municipios.find((m) => m.id === 'jumilla').available = false; } // como si aún no se hubiera publicado
+      r.fulfill({ response: res, body: JSON.stringify(j) });
+    });
+    await p2.goto(BASE + '#/mapa?calle=w1'); await p2.waitForSelector('#q');
+    check('Cambio: el selector muestra el municipio sin datos al abrir', (await p2.textContent('#muniSel')).includes('Otrapueba (sin datos)'));
+    await p2.click('[data-muni="jumilla"]');
+    await p2.waitForSelector('#q', { timeout: 8000 });
+    await p2.fill('#q', 'real'); await p2.waitForTimeout(250);
+    const res2 = await p2.textContent('#results');
+    check('Cambio: sin refrescar, el mapa del nuevo municipio es interactivo', res2.includes('Calle Real'), res2.slice(0, 60));
+    await p2.click('#results a[data-s]'); await p2.waitForTimeout(300);
+    check('Cambio: ficha de calle del nuevo municipio', (await p2.textContent('#info')).includes('Calle Real'));
+    check('Cambio: sin parámetros del municipio anterior y selector actualizado', !p2.url().includes('calle=w1') && !(await p2.textContent('#muniSel')).includes('(sin datos)') || (await p2.textContent('#muniSel')).includes('Sindatos (sin datos)'));
+    await p2.screenshot({ path: `${OUT}/21-cambio-municipio-mapa.png` });
+    await p2.click('[data-muni="cieza"]'); await p2.waitForSelector('#q'); await p2.fill('#q', 'mayor'); await p2.waitForTimeout(250);
+    check('Cambio: al volver, mapa del primer municipio', (await p2.textContent('#results')).includes('Calle Mayor'));
+    await ctx2.close();
+  }
 } catch (e) {
   errors.push('EXCEPCIÓN: ' + e.message);
   await shot('error').catch(() => {});
