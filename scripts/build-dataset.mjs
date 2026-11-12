@@ -17,6 +17,10 @@ const readJson = (p, d) => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) 
 
 function buildOne({ input, output, report, config, verifications, label }) {
   const osm = readJson(input);
+  if (!Array.isArray(osm?.elements)) {
+    const kind = osm?.type === 'FeatureCollection' ? 'un GeoJSON' : 'un formato desconocido';
+    throw new Error(`${label}: el archivo ${input.split('/').slice(-2).join('/')} es ${kind}, no un volcado «raw OSM data». En overpass-turbo usa Exportar → «raw OSM data» (no «GeoJSON»).`);
+  }
   const importedAt = osm._import?.importedAt || osm.osm3s?.timestamp_osm_base || new Date().toISOString();
   const t0 = Date.now();
   const ds = buildDataset(osm, { config, verifications, importedAt });
@@ -52,21 +56,27 @@ const all = loadMunicipios();
 const only = arg('--muni');
 const index = [];
 let built = 0;
+const errors = [];
 for (const m of all) {
   const p = paths(m.id);
   const entry = { id: m.id, name: m.name, exam: m.exam, file: `data/callejero-${m.id}.geojson`, available: false };
   if ((!only || only === m.id) && existsSync(p.raw)) {
-    const ds = buildOne({ input: p.raw, output: p.out, report: p.report, config: m.config || { townName: m.name }, verifications: readJson(p.ver, {}), label: m.name });
-    if (ds.metadata.counts.streets) built++;
+    try {
+      const ds = buildOne({ input: p.raw, output: p.out, report: p.report, config: m.config || { townName: m.name }, verifications: readJson(p.ver, {}), label: m.name });
+      if (ds.metadata.counts.streets) built++;
+      else console.error(`✗ ${m.name}: el volcado no contiene vías con nombre. Revisa que la consulta se ejecutó entera en overpass-turbo.`);
+    } catch (e) { console.error('✗ ' + e.message); errors.push(m.name); }
   }
   if (existsSync(p.out)) {
     const meta = readJson(p.out).metadata;
     Object.assign(entry, { available: meta.counts.streets > 0, importedAt: meta.importedAt, counts: meta.counts });
-  } else console.log(`${m.name}: sin datos (falta data-raw/osm-${m.id}.json)`);
+  } else if (!existsSync(p.raw)) console.log(`${m.name}: sin datos (falta data-raw/osm-${m.id}.json)`);
   index.push(entry);
 }
 mkdirSync(dirname(paths('x').index), { recursive: true });
 writeFileSync(paths('x').index, JSON.stringify({ generatedAt: new Date().toISOString(), municipios: index }, null, 1));
 console.log(`Índice: public/data/municipios.json (${index.filter((x) => x.available).length}/${index.length} municipios con datos)`);
 if (!index.some((x) => x.available)) { console.error('Ningún municipio tiene datos. Ejecuta npm run data:import'); process.exit(1); }
+// Un archivo de datos estropeado debe verse: el flujo de GitHub se marca en rojo con el motivo
+if (errors.length) { console.error(`\nNo se pudo construir el callejero de: ${errors.join(', ')}`); process.exit(1); }
 void built; void ROOT;

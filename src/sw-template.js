@@ -1,7 +1,7 @@
 /* Service worker de Estudio de Callejero. Lo genera vite.config.js al compilar (no editar dist/sw.js).
  *  - Precarga la aplicación completa y el callejero (GeoJSON) para funcionar sin conexión.
  *  - Navegación: red primero y, sin conexión, la aplicación en caché (o offline.html).
- *  - Datos del callejero: caché primero y actualización en segundo plano.
+ *  - Datos del callejero (data/*.json, data/*.geojson): red primero y, sin conexión, la copia guardada.
  *  - No intercepta teselas del mapa base, Firebase ni otros dominios: no se guarda en
  *    caché ningún recurso de terceros (respeta la política de uso de tile.openstreetmap.org).
  *  - Actualización: la versión nueva espera hasta que el usuario pulsa «Actualizar».
@@ -37,12 +37,13 @@ self.addEventListener('fetch', (e) => {
     })());
     return;
   }
-  if (url.pathname.endsWith('/data/callejero.geojson')) {
+  // Datos del callejero (índice de municipios y callejeros): red primero, para ver siempre la
+  // última importación publicada; sin conexión, la copia guardada.
+  if (url.pathname.includes('/data/') && /\.(geo)?json$/.test(url.pathname)) {
     e.respondWith((async () => {
       const c = await caches.open(CACHE);
-      const hit = await c.match(req, { ignoreSearch: true });
-      const net = fetch(req).then((r) => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => null);
-      return hit || (await net) || new Response('{}', { status: 503 });
+      try { const r = await fetch(req, { cache: 'no-cache' }); if (r.ok) c.put(req, r.clone()); return r; }
+      catch { return (await c.match(req, { ignoreSearch: true })) || new Response('{}', { status: 503 }); }
     })());
     return;
   }
