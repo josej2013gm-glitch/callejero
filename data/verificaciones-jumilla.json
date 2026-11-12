@@ -1,0 +1,6 @@
+{
+  "_info": "Verificaciones de Jumilla y correcciones manuales. Se generan desde el panel Administración (botón «Exportar verificaciones») y se aplican con `npm run data:build`. Claves: identificador de la vía (p. ej. w123456), del edificio (n…, w…, r…) o del cruce (idA|idB). Estados: verificado, corregido, dudoso, excluido (vías y edificios); confirmado, erroneo (cruces).",
+  "streets": {},
+  "pois": {},
+  "pairs": {}
+}

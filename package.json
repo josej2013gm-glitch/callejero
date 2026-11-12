@@ -1,8 +1,8 @@
 {
-  "name": "callejero-cieza",
-  "version": "1.1.0",
+  "name": "estudio-callejero",
+  "version": "1.2.0",
   "private": true,
-  "description": "Aplicación de estudio del callejero de Cieza para la oposición de Agente de Policía Local",
+  "description": "Aplicación de estudio del callejero (Cieza, Jumilla…) para oposiciones de Agente de Policía Local",
   "type": "module",
   "license": "MIT",
   "engines": {

@@ -69,7 +69,7 @@ export default {
           <label>Nombre en OSM <input value="${s.osmName}" disabled></label>
           <label>Nombre corregido (solo si es incorrecto) <input name="name" value="${o.name || ''}" placeholder="Dejar vacío si es correcto"></label>
           <label>Estado <select name="status">${ST_STATUSES.map((x) => html`<option value="${x}" ${s.ver.status === x ? 'selected' : ''}>${VER_LABEL[x]}</option>`)}</select></label>
-          <label>Fuente de la verificación <input name="source" value="${o.source || (s.ver.status !== 'importado' ? s.ver.source : '')}" placeholder="p. ej. Callejero municipal del Ayuntamiento de Cieza, 2026"></label>
+          <label>Fuente de la verificación <input name="source" value="${o.source || (s.ver.status !== 'importado' ? s.ver.source : '')}" placeholder="p. ej. Callejero municipal del Ayuntamiento de ${app.muniInfo?.name || ''}, 2026"></label>
           <label>Fecha <input type="date" name="date" value="${o.date || today()}"></label>
           <label>Observaciones <textarea name="notes" rows="2">${o.notes || s.ver.notes || ''}</textarea></label>
           <div class="row"><button class="btn primary" type="submit">Guardar</button>${o.status ? html`<button class="btn ghost" id="undo" type="button">Quitar corrección local</button>` : ''}</div>
@@ -158,6 +158,7 @@ export default {
         <div class="grid cols2">
           <div class="card"><h3>Conjunto de datos en uso</h3>
             <ul class="kv small">
+              <li><span>Municipio</span><b>${app.muniInfo?.name || app.muni}</b></li>
               <li><span>Origen</span><b>${app.datasetSource}</b></li>
               <li><span>Fuente</span><b>${meta.source} (${meta.license})</b></li>
               <li><span>Importado</span><b>${fmtDate(meta.importedAt, true)}</b></li>
@@ -166,13 +167,13 @@ export default {
               <li><span>Correcciones locales</span><b>${nLocal}</b></li>
             </ul>
             <h4>Probar una nueva versión</h4>
-            <p class="small">Carga un <code>callejero.geojson</code> generado con <code>npm run data:import</code> para revisarlo en este dispositivo antes de publicarlo.</p>
+            <p class="small">Carga un <code>callejero-${app.muni}.geojson</code> generado con <code>npm run data:import</code> para revisarlo en este dispositivo antes de publicarlo.</p>
             <input type="file" id="dsFile" accept=".geojson,.json,application/json">
             ${app.datasetSource !== 'publicado' ? html`<button class="btn ghost" id="dsRevert" type="button">Volver al conjunto publicado</button>` : ''}
           </div>
           <div class="card"><h3>Exportar verificaciones</h3>
-            <p class="small">Genera <code>verificaciones.json</code> con todas las verificaciones (las ya publicadas y las nuevas de este dispositivo). Sustituye con él <code>data/verificaciones.json</code> del proyecto y ejecuta <code>npm run data:build</code>; así las correcciones quedan en el repositorio y se aplican a todos.</p>
-            <button class="btn primary" id="exp" type="button">Descargar verificaciones.json</button>
+            <p class="small">Genera <code>verificaciones-${app.muni}.json</code> con todas las verificaciones de ${app.muniInfo?.name || ''} (las ya publicadas y las nuevas). Súbelo a la carpeta <code>data</code> del repositorio (sustituyendo al anterior): al publicarse, las correcciones se aplican al callejero para todos.</p>
+            <button class="btn primary" id="exp" type="button">Descargar verificaciones-${app.muni}.json</button>
             <h3>Comprobar el generador</h3>
             <p class="small">Genera 300 preguntas y las verifica de forma independiente con los datos actuales.</p>
             <button class="btn" id="selftest" type="button">Ejecutar comprobación</button>
@@ -189,7 +190,7 @@ export default {
         } catch (err) { toast('Archivo no válido: ' + err.message, 'error', 6000); }
       });
       $('#dsRevert', T)?.addEventListener('click', async () => { await setDatasetOverride(null); toast('Se usa de nuevo el conjunto publicado.', 'ok'); datos(); });
-      $('#exp', T).addEventListener('click', () => download('verificaciones.json', exportVerifications()));
+      $('#exp', T).addEventListener('click', () => download(`verificaciones-${app.muni}.json`, exportVerifications()));
       $('#selftest', T).addEventListener('click', () => {
         const res = $('#stres', T); res.textContent = 'Comprobando…';
         setTimeout(() => {
@@ -204,7 +205,7 @@ export default {
     }
 
     function exportVerifications() {
-      const out = { _info: 'Generado desde Administración el ' + new Date().toLocaleString('es-ES'), streets: {}, pois: {}, pairs: {} };
+      const out = { _info: `Verificaciones de ${app.muniInfo?.name || app.muni}. Generado desde Administración el ` + new Date().toLocaleString('es-ES'), streets: {}, pois: {}, pairs: {} };
       for (const s of M().streets) if (s.ver.status !== 'importado') out.streets[s.id] = clean({ status: s.ver.status, name: s.ver.status === 'corregido' ? s.name : undefined, source: s.ver.source, date: s.ver.date, notes: s.ver.notes, nameAtCheck: s.osmName });
       for (const p of M().pois) if (p.ver.status !== 'importado' || app.overrides.pois?.[p.id]?.street) out.pois[p.id] = clean({ status: p.ver.status, name: app.overrides.pois?.[p.id]?.name, street: app.overrides.pois?.[p.id]?.street, source: p.ver.source, date: p.ver.date, notes: p.ver.notes });
       for (const p of M().pair.values()) if (p.ver.status !== 'importado') out.pairs[p.id] = clean({ status: p.ver.status, source: p.ver.source, date: p.ver.date, notes: p.ver.notes });

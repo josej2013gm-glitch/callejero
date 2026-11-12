@@ -33,19 +33,19 @@ export default {
         ${isOwner() ? html`<div class="card" id="acc"><h3>Cuentas autorizadas</h3><p class="muted small">Cargando…</p></div>` : ''}
         <div class="grid cols2">
           <div class="card"><h3>Copia de seguridad</h3>
-            <p class="small">Descarga tus ajustes, progreso, historial y correcciones en un archivo JSON. Al importarla se fusiona con lo que ya tienes.</p>
+            <p class="small">Descarga tus ajustes y el progreso, historial y correcciones de todos los municipios en un archivo JSON. Al importarla se fusiona con lo que ya tienes.</p>
             <div class="row wrap"><button class="btn" id="bk" type="button">Descargar copia</button><label class="btn ghost file">Importar copia<input type="file" id="bkIn" accept=".json" hidden></label></div>
             <h3>Borrar datos</h3>
             <p class="small">Elimina el progreso, el historial y las correcciones${u ? ' de este dispositivo y de tu cuenta en la nube' : ' de este dispositivo'}.</p>
-            <button class="btn danger" id="wipe" type="button">Borrar todo</button>
+            <div class="row wrap"><button class="btn danger" id="wipeMuni" type="button">Borrar solo ${app.muniInfo?.name || 'este municipio'}</button><button class="btn danger" id="wipe" type="button">Borrar todo</button></div>
           </div>
           <div class="card"><h3>Acerca de</h3>
             <ul class="kv small">
               <li><span>Versión</span><b>${APP_VERSION}</b></li>
               <li><span>Datos geográficos</span><b>© colaboradores de OpenStreetMap (ODbL)</b></li>
-              <li><span>Importados</span><b>${fmtDate(app.model?.meta.importedAt)}</b></li>
+              ${app.munis.map((m) => html`<li><span>Callejero de ${m.name}</span><b>${m.available === false ? 'sin datos' : 'importado ' + fmtDate(m.importedAt)}</b></li>`)}
             </ul>
-            <p class="small">Herramienta de estudio no oficial. Los nombres y relaciones proceden de OpenStreetMap y pueden contener errores: contrástalos con el callejero del Ayuntamiento de Cieza.</p>
+            <p class="small">Herramienta de estudio no oficial. Los nombres y relaciones proceden de OpenStreetMap y pueden contener errores: contrástalos con el callejero oficial de cada Ayuntamiento.</p>
             <button class="btn ghost small" id="upd" type="button">Buscar actualización de la aplicación</button>
           </div>
         </div>`);
@@ -62,11 +62,15 @@ export default {
       $('#defIv', root).addEventListener('click', () => { root.querySelector('[name=intervals]').value = DEFAULT_INTERVALS.join(', '); });
       $('#bk', root).addEventListener('click', () => {
         const blob = new Blob([JSON.stringify(exportBackup())], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `callejero-cieza-copia-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `estudio-callejero-copia-${new Date().toISOString().slice(0, 10)}.json`; a.click();
       });
       $('#bkIn', root).addEventListener('change', async (e) => {
         const f = e.target.files[0]; if (!f) return;
         try { await importBackup(JSON.parse(await f.text())); toast('Copia importada.', 'ok'); draw(); } catch (err) { toast(err.message, 'error', 6000); }
+      });
+      $('#wipeMuni', root).addEventListener('click', async () => {
+        if (!(await confirmDialog(`Borrar los datos de ${app.muniInfo?.name}`, 'Se eliminan el progreso, el historial y las correcciones de este municipio. Los demás municipios no se tocan.', 'Borrar'))) return;
+        try { await resetAll({ muniOnly: true }); toast('Datos del municipio borrados.', 'ok'); draw(); } catch (err) { toast(err.message, 'error', 6000); }
       });
       $('#wipe', root).addEventListener('click', async () => {
         if (!(await confirmDialog('Borrar todos los datos', 'Esta acción no se puede deshacer. Descarga antes una copia de seguridad si quieres conservarlos.', 'Borrar'))) return;

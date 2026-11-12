@@ -1,7 +1,7 @@
 {
-  "name": "Callejero Cieza · Oposición Policía Local",
-  "short_name": "Callejero Cieza",
-  "description": "Estudio del callejero de Cieza: mapa, mapa mudo, entrenamiento, simulacros y repaso.",
+  "name": "Estudio de Callejero · Oposición Policía Local",
+  "short_name": "Callejero",
+  "description": "Estudio del callejero de Cieza, Jumilla y otros municipios: mapa, mapa mudo, entrenamiento, simulacros y repaso.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

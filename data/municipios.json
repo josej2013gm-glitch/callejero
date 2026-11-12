@@ -1,0 +1,35 @@
+{
+  "_info": "Municipios que estudia la aplicación. Para añadir uno: copia una entrada, cambia id (minúsculas, sin espacios), nombre, consulta Overpass (data/overpass/<id>.overpassql) y examen. Después ejecuta el flujo «Publicar» con importar = <id>.",
+  "municipios": [
+    {
+      "id": "cieza",
+      "name": "Cieza",
+      "query": "data/overpass/cieza.overpassql",
+      "config": { "townName": "Cieza" },
+      "exam": {
+        "format": "test",
+        "questions": 20,
+        "correct": 0.10,
+        "wrong": 0.03,
+        "max": 2,
+        "pass": null,
+        "source": "Bases de Cieza, BORM n.º 140 de 20/06/2026",
+        "notes": "20 preguntas con 4 alternativas. Acierto +0,10, error −0,03, blanco 0. Máximo 2 puntos. No eliminatoria."
+      }
+    },
+    {
+      "id": "jumilla",
+      "name": "Jumilla",
+      "query": "data/overpass/jumilla.overpassql",
+      "config": { "townName": "Jumilla" },
+      "exam": {
+        "format": "mapaMudo",
+        "items": 20,
+        "max": 10,
+        "pass": 5,
+        "source": "Bases de Jumilla, BORM n.º 76 de 01/04/2022 (convocatoria anterior)",
+        "notes": "Rellenar un mapa mudo del callejero de Jumilla (parte del primer ejercicio). Se puntúa de 0 a 10 y hay que obtener al menos 5. Las bases no fijan el número de calles: ajusta «items» cuando se publiquen las bases vigentes."
+      }
+    }
+  ]
+}

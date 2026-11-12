@@ -20,4 +20,4 @@ export const firebaseEnabled = !!(firebaseConfig.apiKey && firebaseConfig.projec
 /** Correo del propietario: siempre tiene acceso y es el único que gestiona las cuentas autorizadas. */
 export const ownerEmail = String(env.VITE_OWNER_EMAIL || '').trim().toLowerCase();
 
-export const APP_VERSION = env.VITE_APP_VERSION || '1.1.0';
+export const APP_VERSION = env.VITE_APP_VERSION || '1.2.0';

@@ -1,5 +1,5 @@
 import { html, setHTML, fmtDate, progressBar } from '../ui/dom.js';
-import { app } from '../app/store.js';
+import { app, exam } from '../app/store.js';
 import { mastery, dueList, globalStats, recommendation } from '../app/analytics.js';
 import { fmtNota } from '../engine/scoring.js';
 import { TRUSTED } from '../engine/model.js';
@@ -10,6 +10,8 @@ export default {
   title: 'Inicio',
   render(root) {
     const m = mastery(), g = globalStats(), due = dueList(), rec = recommendation();
+    const E = exam();
+    const examTxt = E.format === 'mapaMudo' ? `rellenar ${E.items} vías · nota sobre ${fmtNota(E.max)}` : `${E.questions} preguntas · +${fmtNota(E.correct)} / −${fmtNota(E.wrong)}`;
     const last = app.sessions.slice(-5).reverse();
     const M = app.model;
     const verified = M.streets.filter((s) => TRUSTED.has(s.ver.status)).length;
@@ -17,7 +19,7 @@ export default {
       <section class="grid cards4">
         <div class="card stat"><span class="k">Dominio del callejero</span><b>${m.pct} %</b>${progressBar(m.mastered, m.total)}<small>${m.mastered} de ${m.total} vías dominadas</small></div>
         <div class="card stat"><span class="k">Calles estudiadas</span><b>${m.studied}</b><small>de ${m.total} vías del ámbito de estudio</small></div>
-        <div class="card stat"><span class="k">Mejor simulacro oficial</span><b>${g.best != null ? fmtNota(g.best) : '—'}</b><small>${g.officialCount ? `media ${fmtNota(g.avg)} en ${g.officialCount} simulacro${g.officialCount > 1 ? 's' : ''}` : 'sobre 2,00 puntos'}</small></div>
+        <div class="card stat"><span class="k">Mejor simulacro oficial</span><b>${g.best != null ? fmtNota(g.best) : '—'}</b><small>${g.officialCount ? `sobre ${fmtNota(E.max)} · media ${fmtNota(g.avg)} en ${g.officialCount} simulacro${g.officialCount > 1 ? 's' : ''}` : `sobre ${fmtNota(E.max)} puntos`}</small></div>
         <div class="card stat ${due.length ? 'alert' : ''}"><span class="k">Pendientes de repaso</span><b>${due.length}</b><small><a href="#/repaso">Ir al repaso →</a></small></div>
       </section>
 
@@ -28,7 +30,7 @@ export default {
 
       <section class="grid cards3 quick">
         <a class="card action" href="#/mapa"><span class="ico">🗺️</span><b>Mapa interactivo</b><small>Explora calles, cruces y edificios</small></a>
-        <a class="card action" href="#/simulacro?oficial=1"><span class="ico">📝</span><b>Simulacro oficial</b><small>20 preguntas · +0,10 / −0,03</small></a>
+        <a class="card action" href="#/simulacro?oficial=1"><span class="ico">📝</span><b>Simulacro oficial${E.format === 'mapaMudo' ? ' · mapa mudo' : ''}</b><small>${examTxt}</small></a>
         <a class="card action" href="#/mudo"><span class="ico">🧭</span><b>Mapa mudo</b><small>Nivel ${app.progress.mudo?.level || 1} de 5</small></a>
       </section>
 
@@ -50,7 +52,7 @@ export default {
             <li><span>Importado de OSM</span><b>${fmtDate(M.meta.importedAt)}</b></li>
             <li><span>Origen</span><b>${app.datasetSource}</b></li>
           </ul>
-          <p class="muted small">Los datos proceden de OpenStreetMap y deben contrastarse con el callejero oficial del Ayuntamiento. Gestiona la verificación en <a href="#/admin">Administración</a>.</p>
+          <p class="muted small">Los datos proceden de OpenStreetMap y deben contrastarse con el callejero oficial del Ayuntamiento de ${app.muniInfo?.name || ''}. Gestiona la verificación en <a href="#/admin">Administración</a>.</p>
         </div>
       </section>`);
   },

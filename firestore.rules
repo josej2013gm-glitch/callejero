@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Reglas de seguridad de Cloud Firestore para Callejero Cieza.
+// Reglas de seguridad de Cloud Firestore para Estudio de Callejero.
 //
 // · Solo cuentas de Google con correo verificado.
 // · Solo el propietario (__OWNER_EMAIL__, se sustituye al publicar con la variable
@@ -54,9 +54,10 @@ service cloud.firestore {
       allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['settings', 'email', 'name', 'updatedAt']);
 
-      // Progreso de repaso espaciado y correcciones del panel de administración
+      // Progreso de repaso espaciado y correcciones de cada municipio:
+      // progress / overrides (Cieza) y progress-<municipio> / overrides-<municipio>
       match /state/{docId} {
-        allow read, write: if isOwner(uid) && docId in ['progress', 'overrides'];
+        allow read, write: if isOwner(uid) && docId.matches('^(progress|overrides)(-[a-z0-9-]{1,30})?$');
       }
 
       // Historial: un documento por sesión o simulacro
@@ -67,6 +68,7 @@ service cloud.firestore {
           && request.resource.data.id == sid
           && request.resource.data.endedAt is number
           && request.resource.data.mode in ['oficial', 'simulacro', 'entrenamiento', 'mudo', 'repaso']
+          && (!('muni' in request.resource.data) || (request.resource.data.muni is string && request.resource.data.muni.size() <= 30))
           && smallSession();
       }
     }

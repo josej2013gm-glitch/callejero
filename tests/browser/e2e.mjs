@@ -163,6 +163,38 @@ try {
   check('Simulacro: solo las 5 modalidades', nq === 30 && [...simCats].every((c) => okCats.includes(c)), `${nq} preg.: ` + [...simCats].join(' | '));
   await go('#/simulacro'); await page.click('#discard').catch(() => {});
 
+  // ---- Varios municipios: datos separados y simulacro de mapa mudo ----
+  await go('#/'); await page.waitForSelector('.muni-tabs');
+  await page.click('[data-muni="jumilla"]'); await page.waitForTimeout(700);
+  check('Municipios: cambio con las pestañas', (await page.textContent('.muni-tabs .on')).includes('Otrapueba') && (await page.inputValue('#muniSel')) === 'jumilla');
+  await go('#/estadisticas');
+  check('Municipios: historial separado (vacío en el segundo)', (await page.textContent('main')).includes('Aún no has hecho simulacros'));
+  await go('#/simulacro');
+  check('Municipios: formato de simulacro propio (mapa mudo)', await page.locator('#mm').isVisible() && !(await page.locator('#off').count()));
+  await page.click('#mm button[type=submit]'); await page.waitForSelector('.mm-list input');
+  const nItems = await page.locator('.mm-list input').count();
+  await page.waitForTimeout(300); await shot('19-mapa-mudo-examen');
+  // Lee las vías numeradas guardadas y responde 5 bien (sin «Calle» ni tildes), 1 mal, resto en blanco
+  const mm = await page.evaluate(() => new Promise((res) => { const r = indexedDB.open('callejero-local'); r.onsuccess = () => { const g = r.result.transaction('kv').objectStore('kv').get('simInProgress:jumilla'); g.onsuccess = () => res(g.result); }; }));
+  const geo = await page.evaluate(async () => (await (await fetch('/data/callejero-jumilla.geojson')).json()).features.filter((f) => f.properties.kind === 'street').map((f) => [f.properties.id, f.properties.name]));
+  const nameOf = Object.fromEntries(geo);
+  for (let i = 0; i < 6; i++) {
+    const txt = i < 5 ? nameOf[mm.ids[i]].replace(/^(Calle|Avenida) (del |de la |de )?/, '').toLowerCase() : 'Calle Inventada';
+    await page.locator('.mm-list input').nth(i).fill(txt);
+  }
+  await page.click('#submit'); await page.waitForSelector('.modal'); await page.locator('.modal .btn.primary').click();
+  await page.waitForSelector('.result');
+  const rtxt2 = await page.textContent('.result');
+  const exp2 = (Math.round((5 / nItems) * 1000) / 100).toFixed(2).replace('.', ',');
+  check('Mapa mudo: corrección y nota sobre 10', rtxt2.includes('5 aciertos') && rtxt2.includes('1 errores') && rtxt2.includes(exp2 + ' / 10,00'), `${nItems} vías → ${exp2}`);
+  await page.waitForTimeout(300); await shot('20-mapa-mudo-resultado');
+  await go('#/estadisticas');
+  check('Municipios: el simulacro queda en el historial del segundo', (await page.locator('.tbl tbody tr').count()) >= 1 && (await page.textContent('main')).includes('mapa mudo'));
+  await page.click('[data-muni="vacio"]'); await page.waitForTimeout(600);
+  check('Municipio sin datos: instrucciones', (await page.textContent('main')).includes('Todavía no hay callejero de Sindatos'));
+  await page.click('[data-muni="cieza"]'); await page.waitForTimeout(700); await go('#/estadisticas');
+  check('Municipios: al volver, el historial del primero sigue igual', (await page.textContent('main')).includes('Oficial · test') && !(await page.textContent('main')).includes('mapa mudo'));
+
   // Repaso, zonas, admin, ajustes
   await go('#/repaso');
   check('Repaso: lista de prioridades', (await page.textContent('main')).includes('conceptos pendientes'));

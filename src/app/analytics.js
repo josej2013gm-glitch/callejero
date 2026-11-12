@@ -1,6 +1,6 @@
 // Métricas derivadas del progreso y del historial (dashboard, zonas, estadísticas, repaso).
 
-import { app } from './store.js';
+import { app, exam } from './store.js';
 import { isMastered, isDue, priority, reason } from '../engine/srs.js';
 import { eligibleStreets } from '../engine/model.js';
 import { TYPE_NAME } from '../engine/questions.js';
@@ -68,7 +68,7 @@ export function byCategory() {
   const m = {};
   for (const a of allAnswers()) {
     const c = a.cat || a.type; if (!c) continue;
-    m[c] ||= { cat: c, name: TYPE_NAME[c] || c, n: 0, ok: 0, ko: 0, blank: 0, ms: 0 };
+    m[c] ||= { cat: c, name: TYPE_NAME[c] || (c === 'mapamudo' ? 'Mapa mudo (rellenar)' : c), n: 0, ok: 0, ko: 0, blank: 0, ms: 0 };
     m[c].n++; if (a.ok === true) m[c].ok++; else if (a.ok === false) m[c].ko++; else m[c].blank++;
     m[c].ms += a.ms || 0;
   }
@@ -78,13 +78,19 @@ export function byCategory() {
 export function exams(modes = ['oficial', 'simulacro']) {
   return app.sessions.filter((s) => modes.includes(s.mode) && s.score);
 }
+/** Nota de una sesión en la escala oficial del municipio (sobre 2 en Cieza, sobre 10 en Jumilla). */
+export function scaled(s) {
+  const e = exam();
+  if (s.score.escalada != null) return s.score.escalada;
+  return s.score.max ? Math.round((s.score.nota / s.score.max) * (e.max || 2) * 1000) / 1000 : 0;
+}
 
 export function globalStats() {
   const ans = allAnswers().filter((a) => a.ok !== null && a.ok !== undefined);
   const ok = ans.filter((a) => a.ok).length;
   const off = exams(['oficial']);
-  const best = off.reduce((m, s) => Math.max(m, s.score.nota), 0);
-  const avg = off.length ? off.reduce((m, s) => m + s.score.nota, 0) / off.length : null;
+  const best = off.reduce((m, s) => Math.max(m, scaled(s)), 0);
+  const avg = off.length ? off.reduce((m, s) => m + scaled(s), 0) / off.length : null;
   const timed = allAnswers().filter((a) => a.ms > 0);
   return {
     answered: ans.length, ok, pct: ans.length ? Math.round((ok / ans.length) * 100) : 0,
@@ -102,7 +108,7 @@ export function frequentErrors(n = 10) {
 export function recommendation() {
   const cats = byCategory().filter((c) => c.n >= 5);
   const due = dueList();
-  if (!app.sessions.length) return { text: 'Empieza identificando las vías del Centro urbano en el mapa mudo, nivel 1.', href: '#/mudo' };
+  if (!app.sessions.length) return { text: `Empieza identificando las vías del centro de ${app.muniInfo?.name || 'la localidad'} en el mapa mudo, nivel 1.`, href: '#/mudo' };
   if (due.length >= 5) return { text: `Tienes ${due.length} conceptos pendientes de repaso. Repásalos antes de seguir con material nuevo.`, href: '#/repaso' };
   if (cats.length && cats[0].pct < 70) return { text: `Tu punto más débil es «${cats[0].name}» (${cats[0].pct} % de aciertos). Entrena esa modalidad.`, href: `#/entrenamiento?tipo=${cats[0].cat}` };
   const zones = (app.model?.zones || []).filter((z) => z.zkind !== 'tematica' && z.streets.length >= 3).map((z) => ({ z, m: mastery(z.id) })).filter((x) => x.m.total);

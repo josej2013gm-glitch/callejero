@@ -1,6 +1,6 @@
 import './styles/main.css';
 import { html, setHTML, $, $$, toast, confirmDialog } from './ui/dom.js';
-import { app, init, on, switchOwner, importLocalIntoAccount } from './app/store.js';
+import { app, init, on, switchOwner, importLocalIntoAccount, setMuni } from './app/store.js';
 import * as cloud from './services/cloud.js';
 import { kv, hasData } from './services/localdb.js';
 
@@ -30,20 +30,35 @@ let cleanup = null, started = false, authResolved = false;
 function shell() {
   setHTML(document.getElementById('app'), html`
     <aside class="sidebar">
-      <a class="brand" href="#/"><img src="icons/icon-192.png" alt="" width="32" height="32"><span>Callejero <b>Cieza</b></span></a>
+      <a class="brand" href="#/"><img src="icons/icon-192.png" alt="" width="32" height="32"><span>Estudio de <b>Callejero</b></span></a>
+      <label class="muni-pick"><span>Municipio</span><select id="muniSel">${app.munis.map((m) => html`<option value="${m.id}" ${m.id === app.muni ? 'selected' : ''}>${m.name}${m.available === false ? ' (sin datos)' : ''}</option>`)}</select></label>
       <nav>${NAV.map(([k, i, l]) => html`<a href="#/${k}" data-r="${k}"><span class="i">${i}</span>${l}</a>`)}</nav>
       <p class="side-foot">Datos © OpenStreetMap</p>
     </aside>
     <div class="main">
-      <header class="topbar"><button class="menu-btn" id="menuBtn" type="button" aria-label="Menú">☰</button><h1 id="title"></h1><a href="#/ajustes" id="sync" class="sync" title=""></a></header>
+      <header class="topbar"><button class="menu-btn" id="menuBtn" type="button" aria-label="Menú">☰</button><h1 id="title"></h1>${app.munis.length > 1 ? html`<div class="muni-tabs" role="tablist" aria-label="Municipio">${app.munis.map((m) => html`<button type="button" role="tab" data-muni="${m.id}" class="${m.id === app.muni ? 'on' : ''}">${m.name}</button>`)}</div>` : ''}<a href="#/ajustes" id="sync" class="sync" title=""></a></header>
       <div id="banners"></div>
       <main id="view" tabindex="-1"></main>
     </div>
     <nav class="bottomnav">${MOBILE.map((k) => { const n = NAV.find((x) => x[0] === k); return html`<a href="#/${k}" data-r="${k}"><span class="i">${n[1]}</span>${n[2]}</a>`; })}<a href="#" id="more"><span class="i">☰</span>Más</a></nav>`);
   $('#menuBtn').addEventListener('click', () => document.body.classList.toggle('menu-open'));
+  $('#muniSel').addEventListener('change', (e) => changeMuni(e.target.value));
+  $$('[data-muni]').forEach((b) => b.addEventListener('click', () => changeMuni(b.dataset.muni)));
   $('#more').addEventListener('click', (e) => { e.preventDefault(); document.body.classList.toggle('menu-open'); });
   $('.sidebar nav').addEventListener('click', () => document.body.classList.remove('menu-open'));
   updateSync(); banners();
+}
+
+/** Cambia de municipio: cierra la vista actual (guardando lo que haya en curso) y recarga los datos. */
+async function changeMuni(id) {
+  if (id === app.muni) return;
+  cleanup?.(); cleanup = null;
+  await setMuni(id);
+  $('#muniSel').value = app.muni;
+  $$('[data-muni]').forEach((b) => b.classList.toggle('on', b.dataset.muni === app.muni));
+  document.body.classList.remove('menu-open');
+  toast(`Estudiando el callejero de ${app.muniInfo.name}.`, 'info', 2500);
+  route();
 }
 
 function updateSync() {
@@ -83,22 +98,25 @@ function route() {
   const root = $('#view');
   root.className = 'view-' + (name || 'inicio');
   $$('[data-r]').forEach((a) => a.classList.toggle('on', a.dataset.r === name));
-  if (!app.model && !['ajustes'].includes(name)) { $('#title').textContent = 'Sin datos'; return noData(root); }
+  if (!app.model && !['ajustes'].includes(name)) { $('#title').textContent = `${app.muniInfo?.name || ''} · sin datos`; return noData(root); }
   $('#title').textContent = view.title;
-  document.title = `${view.title} · Callejero Cieza`;
+  document.title = `${view.title} · Callejero de ${app.muniInfo?.name || ''}`;
   try { const c = view.render(root, params); cleanup = typeof c === 'function' ? c : null; }
   catch (e) { console.error(e); setHTML(root, html`<div class="card warnbox"><p>Se ha producido un error al mostrar esta sección.</p><pre class="small">${e.message}</pre></div>`); }
   root.focus({ preventScroll: true });
 }
 
 function noData(root) {
-  setHTML(root, html`<div class="card"><h2>Falta el callejero</h2>
-    <p>No se ha encontrado <code>data/callejero.geojson</code>${app.dataError ? html` (${app.dataError.message})` : ''}. Hay que generarlo una vez desde el ordenador con los datos de OpenStreetMap:</p>
-    <pre>npm run data:import
-npm run build
-firebase deploy</pre>
-    <p class="small">Consulta el apartado 16 de GUIA_INSTALACION.md. También puedes cargar un archivo generado en <a href="#/ajustes">Ajustes</a> → Administración.</p>
-    <label class="btn file">Cargar callejero.geojson<input type="file" id="dsf" accept=".geojson,.json" hidden></label></div>`);
+  const m = app.muniInfo || { id: app.muni, name: app.muni };
+  setHTML(root, html`<div class="card"><h2>Todavía no hay callejero de ${m.name}</h2>
+    <p>Falta el archivo <code>public/data/callejero-${m.id}.geojson</code>${app.dataError ? html` (${app.dataError.message})` : ''}. Para generarlo:</p>
+    <ul>
+      <li><b>Desde GitHub</b>: pestaña Actions → <b>Publicar</b> → Run workflow → en «importar» elige <b>${m.id}</b>.</li>
+      <li><b>Si OpenStreetMap no responde</b>: pega <code>data/overpass/${m.id}.overpassql</code> en <a href="https://overpass-turbo.eu" target="_blank" rel="noopener">overpass-turbo.eu</a>, exporta «raw OSM data» y sube el archivo como <code>data-raw/osm-${m.id}.json</code>.</li>
+      <li><b>Desde el ordenador</b>: <code>npm run data:import -- --muni ${m.id}</code> y publica.</li>
+    </ul>
+    <p class="small">Mientras tanto puedes cambiar de municipio en el selector de arriba. También puedes probar un archivo generado:</p>
+    <label class="btn file">Cargar callejero-${m.id}.geojson<input type="file" id="dsf" accept=".geojson,.json" hidden></label></div>`);
   $('#dsf', root).addEventListener('change', async (e) => {
     const { setDatasetOverride } = await import('./app/store.js');
     try { const ds = JSON.parse(await e.target.files[0].text()); if (ds.type !== 'FeatureCollection') throw new Error('formato no válido'); await setDatasetOverride(ds); route(); }

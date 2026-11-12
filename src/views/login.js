@@ -1,5 +1,6 @@
 import { html, setHTML, $ } from '../ui/dom.js';
 import * as cloud from '../services/cloud.js';
+import { app } from '../app/store.js';
 
 export default {
   title: 'Acceso',
@@ -10,8 +11,8 @@ export default {
     setHTML(root, html`
       <div class="login card">
         <img src="icons/icon-192.png" alt="" width="72" height="72">
-        <h1>Callejero Cieza</h1>
-        <p>Preparación de la prueba de callejero · Agente de Policía Local</p>
+        <h1>Estudio de Callejero</h1>
+        <p>Prueba de callejero · Agente de Policía Local<br><small class="muted">${app.munis.map((m) => m.name).join(' · ')}</small></p>
         <button class="btn primary big" id="g" type="button">Entrar con Google</button>
         <p class="err" id="err" role="alert">${notice}</p>
         <p class="small muted">Acceso restringido a cuentas de Google autorizadas.</p>

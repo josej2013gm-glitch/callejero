@@ -209,3 +209,41 @@ test('sesiones: el documento para Firestore no tiene arrays anidados y se recupe
   assert.ok(JSON.stringify(doc).length < 900000, 'por debajo del límite de 1 MiB');
   assert.deepEqual(fromCloud(doc).wrongQs, JSON.parse(JSON.stringify(qs)));
 });
+
+// ---------- Varios municipios y mapa mudo ----------
+test('mapa mudo: corrección flexible de nombres', async () => {
+  const { nameMatches, nameCore } = await import('../src/engine/mapamudo.js');
+  const s = { name: 'Calle de la Gloria', osmName: 'Calle de la Gloria', alt: ['Calle Gloria Antigua'] };
+  assert.equal(nameCore('Calle de la Gloria'), 'gloria');
+  for (const ok of ['Calle de la Gloria', 'calle gloria', 'GLORIA', 'c/ la gloria', 'Gloria Antigua']) assert.ok(nameMatches(ok, s), ok);
+  for (const ko of ['', 'Gloriosa', 'Avenida de España']) assert.ok(!nameMatches(ko, s), ko);
+  const av = { name: 'Avenida de España', alt: [] };
+  assert.ok(nameMatches('Avda. España', av) && nameMatches('espana', av));
+});
+
+test('mapa mudo: selección de vías inequívocas y separadas, y nota sobre 10', async () => {
+  const { pickStreets, scoreMapaMudo, nameCore } = await import('../src/engine/mapamudo.js');
+  const ids = pickStreets(M, { n: 8, rng: mulberry(3) });
+  assert.ok(ids.length >= 6, 'elige vías: ' + ids.length);
+  const cores = ids.map((id) => nameCore(M.street.get(id).name));
+  assert.equal(new Set(cores).size, ids.length, 'sin nombres repetidos');
+  assert.ok(!ids.some((id) => M.street.get(id).name === 'Calle del Olmo'), 'excluye nombres repetidos en el municipio');
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) assert.ok(haversine(M.street.get(ids[i]).mid, M.street.get(ids[j]).mid) >= 80);
+  const answers = ids.map((id, i) => (i < 5 ? M.street.get(id).name : i === 5 ? 'Calle Inventada' : ''));
+  const r = scoreMapaMudo(M, ids, answers, { max: 10, pass: 5 });
+  assert.equal(r.score.correct, 5); assert.equal(r.score.wrong, 1); assert.equal(r.score.blank, ids.length - 6);
+  assert.equal(r.score.nota, Math.round((5 / ids.length) * 1000) / 100);
+  assert.equal(r.score.aprobado, r.score.nota >= 5);
+});
+
+test('reglas de examen por municipio', async () => {
+  const { rulesFromExam } = await import('../src/engine/scoring.js');
+  const R = rulesFromExam({ format: 'test', questions: 30, correct: 0.2, wrong: 0.05, max: 6 });
+  assert.deepEqual([R.questions, R.correct, R.wrong, R.max], [30, 200, 50, 6000]);
+  const key = Array(30).fill(0);
+  const sc = scoreExam([...Array(25).fill(0), ...Array(5).fill(1)], key, R);
+  assert.equal(sc.nota, 4.75); assert.equal(sc.max, 6);
+  assert.equal(rulesFromExam({ format: 'mapaMudo' }), OFFICIAL_RULES);
+});
+
+function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

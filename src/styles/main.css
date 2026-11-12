@@ -232,3 +232,19 @@ fieldset { border: 0; padding: 0; margin: 0 0 1rem; } legend { font-weight: 700;
 }
 @media (max-width: 520px) { .cards4 { grid-template-columns: 1fr 1fr; } .stat b { font-size: 1.5rem; } .tbl { font-size: .8rem; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- Municipios ---------- */
+.muni-pick { display: flex; flex-direction: column; gap: .25rem; margin: .6rem .9rem 0; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.muni-pick select { font-size: .95rem; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--blue); }
+.muni-tabs { display: flex; gap: 2px; background: #e2e8f0; padding: 3px; border-radius: 99px; }
+.muni-tabs button { border: 0; background: transparent; padding: .35rem .9rem; border-radius: 99px; font: inherit; font-weight: 600; font-size: .9rem; color: var(--ink-2); cursor: pointer; }
+.muni-tabs button.on { background: #fff; color: var(--blue); box-shadow: 0 1px 3px rgba(15, 23, 42, .15); }
+/* ---------- Mapa mudo (examen) ---------- */
+.mm-grid { align-items: start; }
+.mm-list { max-height: 560px; overflow-y: auto; margin: 0; }
+.mm-list ol { list-style: none; padding: 0; margin: 0; display: grid; gap: .35rem; }
+.mm-list label { display: flex; flex-direction: row !important; align-items: center; gap: .5rem !important; margin: 0 !important; }
+.mm-list input { flex: 1; min-width: 0; }
+.mm-n { flex: 0 0 28px; display: grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%; background: var(--blue-2); color: #fff; font-weight: 800; font-size: .85rem; }
+.row-ok td:last-child { color: var(--ok); font-weight: 800; } .row-ko td:last-child { color: var(--ko); font-weight: 800; }
+@media (max-width: 900px) { .muni-tabs button { padding: .3rem .6rem; font-size: .82rem; } .topbar h1 { font-size: 1rem; } .mm-list { max-height: none; } }

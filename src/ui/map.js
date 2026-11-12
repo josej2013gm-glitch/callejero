@@ -111,10 +111,10 @@ export function createMap(container, opts = {}) {
     },
     setBuildings(v) { if (v) buildings.addTo(map); else map.removeLayer(buildings); },
     setBaseVisible(v) { if (v) base.addTo(map); else map.removeLayer(base); },
-    highlight(ids, { color = '#f59e0b', weight = 8, label = false, fit = false, letters = null, dash = null } = {}) {
+    highlight(ids, { color = '#f59e0b', weight = 8, label = false, fit = false, letters = null, dash = null, pinColor = null, colors = null } = {}) {
       ids.forEach((id, i) => {
         const s = M.street.get(id); if (!s) return;
-        const c = letters ? OPTION_COLORS[i % 4] : color;
+        const c = colors ? colors[i] : letters ? (pinColor || OPTION_COLORS[i % 4]) : color;
         L.polyline(linesLL(s.lines), { renderer, color: '#fff', weight: weight + 4, opacity: 0.9, interactive: false }).addTo(overlay);
         L.polyline(linesLL(s.lines), { renderer, color: c, weight, opacity: 1, dashArray: dash, interactive: false }).addTo(overlay);
         if (letters) L.marker(LL(s.mid), { icon: L.divIcon({ className: 'letter-pin', html: `<span style="background:${c}">${letters[i]}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }), interactive: false }).addTo(overlay);

@@ -81,35 +81,31 @@ export async function setAllowed(emails) {
 }
 const stateRef = (F, db, uid, id) => F.doc(db, 'users', uid, 'state', id);
 
-/** Descarga perfil, progreso, correcciones y sesiones nuevas desde sinceMs. */
-export async function pull(uid, sinceMs = 0) {
+/** Descarga perfil, documentos de estado (progreso y correcciones de cada municipio) y sesiones nuevas. */
+export async function pull(uid, sinceMs = 0, stateIds = ['progress', 'overrides']) {
   const { db, F } = await load();
-  const [u, p, o] = await Promise.all([F.getDoc(userRef(F, db, uid)), F.getDoc(stateRef(F, db, uid, 'progress')), F.getDoc(stateRef(F, db, uid, 'overrides'))]);
+  const [u, ...st] = await Promise.all([F.getDoc(userRef(F, db, uid)), ...stateIds.map((id) => F.getDoc(stateRef(F, db, uid, id)))]);
   const q = F.query(F.collection(db, 'users', uid, 'sessions'), F.where('endedAt', '>', sinceMs), F.orderBy('endedAt'));
   const snap = await F.getDocs(q);
-  return {
-    user: u.exists() ? u.data() : null,
-    progress: p.exists() ? p.data() : null,
-    overrides: o.exists() ? o.data() : null,
-    sessions: snap.docs.map((d) => d.data()),
-  };
+  const states = {};
+  stateIds.forEach((id, i) => { if (st[i].exists()) states[id] = st[i].data(); });
+  return { user: u.exists() ? u.data() : null, states, sessions: snap.docs.map((d) => d.data()) };
 }
 
 /** Escribe un lote de cambios en una sola operación atómica (writeBatch). */
-export async function push(uid, { user, progress, overrides, sessions = [], deleteSessions = [] }) {
+export async function push(uid, { user, states = {}, sessions = [], deleteSessions = [] }) {
   const { db, F } = await load();
   const b = F.writeBatch(db);
   const ts = Date.now();
   if (user) b.set(userRef(F, db, uid), { ...user, updatedAt: ts }, { merge: true });
-  if (progress) b.set(stateRef(F, db, uid, 'progress'), { ...progress, updatedAt: ts });
-  if (overrides) b.set(stateRef(F, db, uid, 'overrides'), { ...overrides, updatedAt: ts });
+  for (const [id, data] of Object.entries(states)) b.set(stateRef(F, db, uid, id), { ...data, updatedAt: ts });
   for (const s of sessions) b.set(F.doc(db, 'users', uid, 'sessions', s.id), s);
   for (const id of deleteSessions) b.delete(F.doc(db, 'users', uid, 'sessions', id));
   await b.commit();
 }
 
 /** Borra todos los datos del usuario en la nube (ajustes → borrar datos). */
-export async function wipe(uid) {
+export async function wipe(uid, stateIds = ['progress', 'overrides']) {
   const { db, F } = await load();
   const snap = await F.getDocs(F.collection(db, 'users', uid, 'sessions'));
   const ids = snap.docs.map((d) => d.id);
@@ -119,7 +115,8 @@ export async function wipe(uid) {
     await b.commit();
   }
   const b = F.writeBatch(db);
-  b.delete(stateRef(F, db, uid, 'progress')); b.delete(stateRef(F, db, uid, 'overrides')); b.delete(userRef(F, db, uid));
+  for (const id of stateIds) b.delete(stateRef(F, db, uid, id));
+  b.delete(userRef(F, db, uid));
   await b.commit();
 }
 

@@ -44,3 +44,16 @@ export function fmtNota(x) {
 export function aciertosPara(nota, fallos, rules = OFFICIAL_RULES) {
   return Math.ceil((nota * 1000 + fallos * rules.wrong) / rules.correct);
 }
+
+/** Reglas de puntuación tipo test a partir del examen configurado para un municipio. */
+export function rulesFromExam(exam) {
+  if (!exam || exam.format !== 'test') return OFFICIAL_RULES;
+  return Object.freeze({
+    questions: exam.questions || 20,
+    correct: Math.round((exam.correct ?? 0.1) * 1000),
+    wrong: Math.round((exam.wrong ?? 0.03) * 1000),
+    blank: 0,
+    max: Math.round((exam.max ?? 2) * 1000),
+    floorZero: true,
+  });
+}

@@ -1,4 +1,4 @@
-/* Service worker de Callejero Cieza. Lo genera vite.config.js al compilar (no editar dist/sw.js).
+/* Service worker de Estudio de Callejero. Lo genera vite.config.js al compilar (no editar dist/sw.js).
  *  - Precarga la aplicación completa y el callejero (GeoJSON) para funcionar sin conexión.
  *  - Navegación: red primero y, sin conexión, la aplicación en caché (o offline.html).
  *  - Datos del callejero: caché primero y actualización en segundo plano.

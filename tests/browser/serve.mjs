@@ -11,7 +11,18 @@ import { buildDataset } from '../../src/engine/build.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.argv[2] || 5180);
-const dataset = JSON.stringify(buildDataset(makeFixture(), { config: { townName: 'Villaprueba' }, importedAt: '2026-01-02T00:00:00Z' }));
+// Dos municipios FICTICIOS (ids cieza y jumilla para reproducir la configuración real) y uno sin datos
+const fx2 = makeFixture();
+for (const e of fx2.elements) if (e.tags?.name === 'Calle Mayor') e.tags.name = 'Calle Real';
+const datasets = {
+  cieza: JSON.stringify(buildDataset(makeFixture(), { config: { townName: 'Villaprueba' }, importedAt: '2026-01-02T00:00:00Z' })),
+  jumilla: JSON.stringify(buildDataset(fx2, { config: { townName: 'Villaprueba' }, importedAt: '2026-01-03T00:00:00Z' })),
+};
+const index = JSON.stringify({ municipios: [
+  { id: 'cieza', name: 'Villaprueba', file: 'data/callejero-cieza.geojson', available: true, importedAt: '2026-01-02', exam: { format: 'test', questions: 20, correct: 0.1, wrong: 0.03, max: 2, pass: null, source: 'Prueba', notes: '' } },
+  { id: 'jumilla', name: 'Otrapueba', file: 'data/callejero-jumilla.geojson', available: true, importedAt: '2026-01-03', exam: { format: 'mapaMudo', items: 8, max: 10, pass: 5, source: 'Prueba', notes: 'Formato mapa mudo' } },
+  { id: 'vacio', name: 'Sindatos', file: 'data/callejero-vacio.geojson', available: false, exam: { format: 'test' } },
+] });
 const TYPES = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.geojson': 'application/json' };
 
 createServer((req, res) => {
@@ -22,7 +33,9 @@ createServer((req, res) => {
     h = h.replace('<title>', '<script type="importmap">{"imports":{"leaflet":"/tests/browser/leaflet-stub.js"}}</script><link rel="stylesheet" href="/src/styles/main.css"><title>');
     res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end(h);
   }
-  if (p === '/data/callejero.geojson') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(dataset); }
+  if (p === '/data/municipios.json') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(index); }
+  const m = p.match(/^\/data\/callejero-([a-z]+)\.geojson$/);
+  if (m && datasets[m[1]]) { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(datasets[m[1]]); }
   let file = join(ROOT, p);
   if (!existsSync(file)) file = join(ROOT, 'public', p);
   if (!existsSync(file)) { res.writeHead(404); return res.end('404'); }
